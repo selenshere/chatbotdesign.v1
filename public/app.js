@@ -12,15 +12,16 @@ Recipients: Your audience is a preservice teacher who wants to analyse your reas
 Theme: Use simple, child-like language that may sound uncertain or inconsistent. Be uncertain, make mistakes, and explain them simply. Treat unequal parts as valid fractions. Let your diagram reasoning and symbolic reasoning conflict if necessary. Continue naturally from whatever question the teacher asks next. Show what you think makes sense, even if it is mathematically incorrect. Keep your tone natural and informal. Respond in 1–3 short sentences. Do not use long explanations. Stay in character as Taylor at all times.
 `.trim();
 
+// ---- State ----
 const state = {
   sessionId: crypto.randomUUID(),
   startedAt: new Date().toISOString(),
   name: { firstName: "", lastName: "" },
   preQuestions: { q1: "", q2: "", q3: "" },
-  messages: [],
-  annotations: {},
+  messages: [],         // {id, role, who:'teacher'|'taylor', text, ts}
+  annotations: {},      // messageId -> { tagType, comment, nextIntent, updatedAt }
   selectedTaylorMessageId: null,
-  studyCode: ""
+  studyCode: ""         // optional
 };
 
 // By default, start fresh on page load.
@@ -30,6 +31,7 @@ if (__params.get("resume") !== "1") {
   localStorage.removeItem("taylor_task_state");
 }
 
+// Restore (optional)
 const saved = localStorage.getItem("taylor_task_state");
 if (saved) {
   try { Object.assign(state, JSON.parse(saved)); } catch {}
@@ -39,22 +41,21 @@ function persist(){ localStorage.setItem("taylor_task_state", JSON.stringify(sta
 // Optional study code support:
 // - If you deploy with STUDY_CODE on server, set code by visiting: /?code=YOURCODE
 // - It will be stored in localStorage and sent as header x-study-code.
-const urlParams = new URLSearchParams(window.location.search);
-const codeFromUrl = (urlParams.get("code") || "").trim();
+const codeFromUrl = (__params.get("code") || "").trim();
 if (codeFromUrl) {
   state.studyCode = codeFromUrl;
   persist();
-  // remove code from URL
-  urlParams.delete("code");
-  const clean = window.location.pathname + (urlParams.toString() ? "?" + urlParams.toString() : "");
+  __params.delete("code");
+  const clean = window.location.pathname + (__params.toString() ? "?" + __params.toString() : "");
   window.history.replaceState({}, "", clean);
 }
 
-
+// ---- DOM ----
 const pageWelcome = document.getElementById("pageWelcome");
+const pageChat = document.getElementById("pageChat");
+
 const firstNameInput = document.getElementById("firstName");
 const lastNameInput = document.getElementById("lastName");
-const pageChat = document.getElementById("pageChat");
 const q1 = document.getElementById("q1");
 const q2 = document.getElementById("q2");
 const q3 = document.getElementById("q3");
@@ -72,79 +73,92 @@ const annotPanel = document.getElementById("annotPanel");
 const selectedText = document.getElementById("selectedText");
 const tagComment = document.getElementById("tagComment");
 const nextIntent = document.getElementById("nextIntent");
-const saveTagBtn = document.getElementById("saveTagBtn"); // may be null
-const clearTagBtn = document.getElementById("clearTagBtn"); // may be null
-const goToChatBtn = document.getElementById("goToChatBtn");
 const tagSaved = document.getElementById("tagSaved");
+const goToChatBtn = document.getElementById("goToChatBtn");
 
 const downloadBtn = document.getElementById("downloadBtn");
 
+// ---- Init inputs ----
 firstNameInput.value = state.name?.firstName || "";
 lastNameInput.value = state.name?.lastName || "";
 q1.value = state.preQuestions.q1 || "";
 q2.value = state.preQuestions.q2 || "";
 q3.value = state.preQuestions.q3 || "";
 
+// ---- View helpers ----
 function showWelcome(){ pageWelcome.classList.remove("hidden"); pageChat.classList.add("hidden"); }
 function showChat(){ pageWelcome.classList.add("hidden"); pageChat.classList.remove("hidden"); renderChat(); updateCounts(); }
 
 function teacherMessageCount(){ return state.messages.filter(m=>m.who==="teacher").length; }
 function updateCounts(){
   msgCount.textContent = `${teacherMessageCount()}/${MAX_TEACHER_MESSAGES}`;
-  sendBtn.disabled = teacherMessageCount() >= MAX_TEACHER_MESSAGES;
-  apiStatus.textContent = sendBtn.disabled ? "limit reached" : "ready";
+  const limitReached = teacherMessageCount() >= MAX_TEACHER_MESSAGES;
+  sendBtn.disabled = limitReached;
+  if (!document.querySelector(".card.chat")?.classList.contains("is-disabled")) {
+    apiStatus.textContent = limitReached ? "limit reached" : "ready";
+  }
 }
 
-if (state.name?.firstName && state.name?.lastName && state.preQuestions.q1 && state.preQuestions.q2 && state.preQuestions.q3 && state.messages.length) showChat();
-else showWelcome();
+if (state.name?.firstName && state.name?.lastName && state.preQuestions.q1 && state.preQuestions.q2 && state.preQuestions.q3 && state.messages.length) {
+  showChat();
+} else {
+  showWelcome();
+}
 
+// ---- Start button ----
 startBtn.addEventListener("click", async () => {
   formError.textContent = "";
   const fn = firstNameInput.value.trim();
   const ln = lastNameInput.value.trim();
-  const a=q1.value.trim(), b=q2.value.trim(), c=q3.value.trim();
-  if(!fn || !ln){
-    formError.textContent="Lütfen first name ve last name alanlarını doldurun (required).";
-    return;
-  }
-  if(!a||!b||!c){
-    formError.textContent="Lütfen 3 soruyu da doldurun (required).";
-    return;
-  }
+  const a = q1.value.trim();
+  const b = q2.value.trim();
+  const c = q3.value.trim();
+
+  if (!fn || !ln) { formError.textContent = "Lütfen first name ve last name alanlarını doldurun (required)."; return; }
+  if (!a || !b || !c) { formError.textContent = "Lütfen 3 soruyu da doldurun (required)."; return; }
+
   state.name = { firstName: fn, lastName: ln };
-  state.preQuestions={q1:a,q2:b,q3:c}; persist();
+  state.preQuestions = { q1: a, q2: b, q3: c };
+  persist();
+
   showChat();
-  if(state.messages.length===0) await sendTeacherMessage(c);
+
+  // Auto-send first message (q3) if chat is empty
+  if (state.messages.length === 0) {
+    await sendTeacherMessage(c);
+  }
 });
 
+// ---- Rendering ----
 function el(tag, cls, text){
-  const e=document.createElement(tag);
-  if(cls) e.className=cls;
-  if(text!==undefined) e.textContent=text;
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
   return e;
 }
 
 function renderChat(){
-  chatLog.innerHTML="";
-  for(const m of state.messages){
-    const bubble=el("div", `bubble ${m.who==="teacher"?"user":"taylor"}`);
-    bubble.textContent=m.text;
+  chatLog.innerHTML = "";
+  const teacherLabel = (state.name?.firstName || "Teacher");
 
-    const meta=el("div","meta");
-    const teacherLabel = (state.name?.firstName || "Teacher");
-    meta.appendChild(el("span","", m.who==="teacher"?teacherLabel:"Taylor"));
+  for (const m of state.messages) {
+    const bubble = el("div", `bubble ${m.who==="teacher" ? "user" : "taylor"}`);
+    bubble.textContent = m.text;
+
+    const meta = el("div", "meta");
+    meta.appendChild(el("span","", m.who==="teacher" ? teacherLabel : "Taylor"));
     meta.appendChild(el("span","", new Date(m.ts).toLocaleTimeString()));
     bubble.appendChild(meta);
 
-    if(m.who==="taylor"){
-      bubble.dataset.mid=m.id;
-      bubble.addEventListener("click", ()=>openAnnotation(m.id));
+    if (m.who === "taylor") {
+      bubble.dataset.mid = m.id;
+      bubble.addEventListener("click", () => openAnnotation(m.id));
     }
+
     chatLog.appendChild(bubble);
   }
-  chatLog.scrollTop=chatLog.scrollHeight;
+  chatLog.scrollTop = chatLog.scrollHeight;
 }
-
 
 function setChatDisabled(disabled){
   const chatCard = document.querySelector(".card.chat");
@@ -153,44 +167,51 @@ function setChatDisabled(disabled){
     chatCard.classList.add("is-disabled");
     sendBtn.disabled = true;
     userInput.disabled = true;
-  }else{
+    apiStatus.textContent = "paused";
+  } else {
     chatCard.classList.remove("is-disabled");
     userInput.disabled = false;
-    updateCounts(); // re-applies limit logic
+    updateCounts();
   }
 }
 
 function openAnnotation(messageId){
-  state.selectedTaylorMessageId=messageId; persist();
-  const msg=state.messages.find(m=>m.id===messageId); if(!msg) return;
+  state.selectedTaylorMessageId = messageId;
+  persist();
+
+  const msg = state.messages.find(m => m.id === messageId);
+  if (!msg) return;
 
   annotEmpty.classList.add("hidden");
   annotPanel.classList.remove("hidden");
-  selectedText.textContent=msg.text;
+  selectedText.textContent = msg.text;
 
-  const ann=state.annotations[messageId]||null;
-  document.querySelectorAll("input[name='tagType']").forEach(r=>{
-    r.checked = ann ? (r.value===ann.tagType) : false;
+  const ann = state.annotations[messageId] || null;
+  document.querySelectorAll("input[name='tagType']").forEach(r => {
+    r.checked = ann ? (r.value === ann.tagType) : false;
   });
-  tagComment.value=ann?.comment||"";
-  nextIntent.value=ann?.nextIntent||"";
-  tagSaved.textContent="";
+  tagComment.value = ann?.comment || "";
+  nextIntent.value = ann?.nextIntent || "";
+  tagSaved.textContent = "";
+
   setChatDisabled(true);
 }
 
-sendBtn.addEventListener("click", async ()=>{
-  const text=userInput.value.trim();
-  if(!text) return;
+// ---- Sending ----
+sendBtn.addEventListener("click", async () => {
+  const text = userInput.value.trim();
+  if (!text) return;
   await sendTeacherMessage(text);
 });
-userInput.addEventListener("keydown",(e)=>{
-  if((e.ctrlKey||e.metaKey)&&e.key==="Enter") sendBtn.click();
+
+userInput.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") sendBtn.click();
 });
 
 async function sendTeacherMessage(text){
-  if(teacherMessageCount()>=MAX_TEACHER_MESSAGES) return;
+  if (teacherMessageCount() >= MAX_TEACHER_MESSAGES) return;
 
-  userInput.value="";
+  userInput.value = "";
   state.messages.push({
     id: crypto.randomUUID(),
     role: "user",
@@ -198,9 +219,12 @@ async function sendTeacherMessage(text){
     text,
     ts: new Date().toISOString()
   });
-  persist(); renderChat(); updateCounts();
+  persist();
+  renderChat();
+  updateCounts();
 
-  apiStatus.textContent="thinking…";
+  apiStatus.textContent = "thinking…";
+
   try{
     const taylorText = await fetchTaylorReply();
     state.messages.push({
@@ -210,11 +234,12 @@ async function sendTeacherMessage(text){
       text: taylorText,
       ts: new Date().toISOString()
     });
-    persist(); renderChat();
-    apiStatus.textContent="ready";
-  }catch(err){
+    persist();
+    renderChat();
+    apiStatus.textContent = "ready";
+  } catch (err) {
     console.error(err);
-    apiStatus.textContent="error";
+    apiStatus.textContent = "error";
     state.messages.push({
       id: crypto.randomUUID(),
       role: "assistant",
@@ -222,13 +247,14 @@ async function sendTeacherMessage(text){
       text: "(Connection error. Please try again.)",
       ts: new Date().toISOString()
     });
-    persist(); renderChat();
+    persist();
+    renderChat();
   }
 }
 
 function buildModelMessages(){
-  const msgs=[{role:"system", content:TAYLOR_SYSTEM}];
-  for(const m of state.messages){
+  const msgs = [{ role:"system", content: TAYLOR_SYSTEM }];
+  for (const m of state.messages) {
     msgs.push({ role: m.who==="teacher" ? "user" : "assistant", content: m.text });
   }
   return msgs;
@@ -237,27 +263,30 @@ function buildModelMessages(){
 async function fetchTaylorReply(){
   const headers = { "Content-Type": "application/json" };
   if (state.studyCode) headers["x-study-code"] = state.studyCode;
+
   const res = await fetch(PROXY_URL, {
-    method:"POST",
+    method: "POST",
     headers,
     body: JSON.stringify({ messages: buildModelMessages() })
   });
-  if(!res.ok){
+
+  if (!res.ok) {
     const t = await res.text().catch(()=> "");
     throw new Error(`Proxy error ${res.status}: ${t}`);
   }
   const data = await res.json();
-  const reply = (data.reply||"").toString().trim();
-  if(!reply) throw new Error("Empty reply");
+  const reply = (data.reply || "").toString().trim();
+  if (!reply) throw new Error("Empty reply");
   return reply;
 }
 
-
+// ---- Annotation save ----
 function saveCurrentAnnotation(){
   const mid = state.selectedTaylorMessageId;
-  if(!mid) return;
+  if (!mid) return;
+
   const chosen = document.querySelector("input[name='tagType']:checked")?.value || "";
-  state.annotations[mid]={
+  state.annotations[mid] = {
     tagType: chosen,
     comment: tagComment.value.trim(),
     nextIntent: nextIntent.value.trim(),
@@ -266,32 +295,14 @@ function saveCurrentAnnotation(){
   persist();
 }
 
-if (saveTagBtn) saveTagBtn.addEventListener("click", ()=>{
-  if(!state.selectedTaylorMessageId) return;
-  saveCurrentAnnotation();
-  tagSaved.textContent="Saved ✓";
-  setTimeout(()=>tagSaved.textContent="", 1200);
-});
-
-if (clearTagBtn) clearTagBtn.addEventListener("click", ()=>{
-  const mid=state.selectedTaylorMessageId; if(!mid) return;
-  delete state.annotations[mid]; persist();
-  document.querySelectorAll("input[name='tagType']").forEach(r=>r.checked=false);
-  tagComment.value=""; nextIntent.value="";
-  tagSaved.textContent="Cleared";
-  setTimeout(()=>tagSaved.textContent="", 900);
-});
-
-
+// Go to interaction: auto-save + close panel + enable chat
 if (goToChatBtn) {
   goToChatBtn.addEventListener("click", () => {
-    // Auto-save current analysis (even if tag/comment empty)
     if (state.selectedTaylorMessageId) {
       saveCurrentAnnotation();
       tagSaved.textContent = "Saved ✓";
       setTimeout(() => (tagSaved.textContent = ""), 900);
     }
-    // Close analysis panel and return to chat
     annotPanel.classList.add("hidden");
     annotEmpty.classList.remove("hidden");
     state.selectedTaylorMessageId = null;
@@ -301,8 +312,9 @@ if (goToChatBtn) {
   });
 }
 
-downloadBtn.addEventListener("click", ()=>{
-  const exportObj={
+// ---- Download ----
+downloadBtn.addEventListener("click", () => {
+  const exportObj = {
     exportedAt: new Date().toISOString(),
     sessionId: state.sessionId,
     startedAt: state.startedAt,
@@ -311,22 +323,14 @@ downloadBtn.addEventListener("click", ()=>{
     messages: state.messages,
     annotations: state.annotations
   };
-  const blob=new Blob([JSON.stringify(exportObj,null,2)], {type:"application/json"});
 
-  }
-  annotPanel.classList.add("hidden");
-  annotEmpty.classList.remove("hidden");
-  state.selectedTaylorMessageId = null;
-  persist();
-  setChatDisabled(false);
-  userInput.focus();
-});
-
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download=`taylor_task_${state.sessionId}.json`;
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `taylor_task_${state.sessionId}.json`;
   document.body.appendChild(a);
-  a.click(); a.remove();
+  a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 });
