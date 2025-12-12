@@ -72,8 +72,8 @@ const annotPanel = document.getElementById("annotPanel");
 const selectedText = document.getElementById("selectedText");
 const tagComment = document.getElementById("tagComment");
 const nextIntent = document.getElementById("nextIntent");
-const saveTagBtn = document.getElementById("saveTagBtn");
-const clearTagBtn = document.getElementById("clearTagBtn");
+const saveTagBtn = document.getElementById("saveTagBtn"); // may be null
+const clearTagBtn = document.getElementById("clearTagBtn"); // may be null
 const goToChatBtn = document.getElementById("goToChatBtn");
 const tagSaved = document.getElementById("tagSaved");
 
@@ -266,14 +266,14 @@ function saveCurrentAnnotation(){
   persist();
 }
 
-saveTagBtn.addEventListener("click", ()=>{
+if (saveTagBtn) saveTagBtn.addEventListener("click", ()=>{
   if(!state.selectedTaylorMessageId) return;
   saveCurrentAnnotation();
   tagSaved.textContent="Saved ✓";
   setTimeout(()=>tagSaved.textContent="", 1200);
 });
 
-clearTagBtn.addEventListener("click", ()=>{
+if (clearTagBtn) clearTagBtn.addEventListener("click", ()=>{
   const mid=state.selectedTaylorMessageId; if(!mid) return;
   delete state.annotations[mid]; persist();
   document.querySelectorAll("input[name='tagType']").forEach(r=>r.checked=false);
@@ -281,6 +281,25 @@ clearTagBtn.addEventListener("click", ()=>{
   tagSaved.textContent="Cleared";
   setTimeout(()=>tagSaved.textContent="", 900);
 });
+
+
+if (goToChatBtn) {
+  goToChatBtn.addEventListener("click", () => {
+    // Auto-save current analysis (even if tag/comment empty)
+    if (state.selectedTaylorMessageId) {
+      saveCurrentAnnotation();
+      tagSaved.textContent = "Saved ✓";
+      setTimeout(() => (tagSaved.textContent = ""), 900);
+    }
+    // Close analysis panel and return to chat
+    annotPanel.classList.add("hidden");
+    annotEmpty.classList.remove("hidden");
+    state.selectedTaylorMessageId = null;
+    persist();
+    setChatDisabled(false);
+    userInput.focus();
+  });
+}
 
 downloadBtn.addEventListener("click", ()=>{
   const exportObj={
@@ -294,10 +313,6 @@ downloadBtn.addEventListener("click", ()=>{
   };
   const blob=new Blob([JSON.stringify(exportObj,null,2)], {type:"application/json"});
 
-goToChatBtn.addEventListener("click", ()=>{
-  // auto-save (even if empty) when leaving analysis
-  if(state.selectedTaylorMessageId){
-    saveCurrentAnnotation();
   }
   annotPanel.classList.add("hidden");
   annotEmpty.classList.remove("hidden");
