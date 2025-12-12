@@ -10,3 +10,8 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o-mini
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 600000
+      - key: RATE_LIMIT_MAX
+        value: 40
+

@@ -25,8 +25,31 @@
       </p>
     </section>
 
+
+    <section class="card taskCard">
+      <h2>Noticing task (fraction)</h2>
+      <p class="muted">Please review the task and Taylor’s work below before starting.</p>
+      <div class="taskImageWrapper">
+        <img src="images/task.png" alt="Noticing task (fraction) with Taylor's solution and dialogue." />
+      </div>
+    </section>
+
     <section class="card">
       <h2>Before you start</h2>
+
+      <div class="nameRow">
+        <label class="q">
+          <span>First name</span>
+          <input id="firstName" type="text" placeholder="First name..." />
+          <div class="hint">Required</div>
+        </label>
+        <label class="q">
+          <span>Last name</span>
+          <input id="lastName" type="text" placeholder="Last name..." />
+          <div class="hint">Required</div>
+        </label>
+      </div>
+
 
       <label class="q">
         <span>1) What would you most like to understand more deeply about Taylor’s thinking?</span>
@@ -114,6 +137,7 @@
           <div class="row">
             <button id="saveTagBtn" class="btn secondary">Save Tag</button>
             <button id="clearTagBtn" class="btn ghost">Clear</button>
+            <button id="goToChatBtn" class="btn primary">Go to interaction</button>
             <div id="tagSaved" class="ok" aria-live="polite"></div>
           </div>
         </div>

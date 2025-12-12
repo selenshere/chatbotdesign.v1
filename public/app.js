@@ -15,10 +15,12 @@ Theme: Use simple, child-like language that may sound uncertain or inconsistent.
 const state = {
   sessionId: crypto.randomUUID(),
   startedAt: new Date().toISOString(),
+  name: { firstName: "", lastName: "" },
   preQuestions: { q1: "", q2: "", q3: "" },
   messages: [],
   annotations: {},
-  selectedTaylorMessageId: null
+  selectedTaylorMessageId: null,
+  studyCode: ""
 };
 
 const saved = localStorage.getItem("taylor_task_state");
@@ -27,7 +29,24 @@ if (saved) {
 }
 function persist(){ localStorage.setItem("taylor_task_state", JSON.stringify(state)); }
 
+// Optional study code support:
+// - If you deploy with STUDY_CODE on server, set code by visiting: /?code=YOURCODE
+// - It will be stored in localStorage and sent as header x-study-code.
+const urlParams = new URLSearchParams(window.location.search);
+const codeFromUrl = (urlParams.get("code") || "").trim();
+if (codeFromUrl) {
+  state.studyCode = codeFromUrl;
+  persist();
+  // remove code from URL
+  urlParams.delete("code");
+  const clean = window.location.pathname + (urlParams.toString() ? "?" + urlParams.toString() : "");
+  window.history.replaceState({}, "", clean);
+}
+
+
 const pageWelcome = document.getElementById("pageWelcome");
+const firstNameInput = document.getElementById("firstName");
+const lastNameInput = document.getElementById("lastName");
 const pageChat = document.getElementById("pageChat");
 const q1 = document.getElementById("q1");
 const q2 = document.getElementById("q2");
@@ -48,10 +67,13 @@ const tagComment = document.getElementById("tagComment");
 const nextIntent = document.getElementById("nextIntent");
 const saveTagBtn = document.getElementById("saveTagBtn");
 const clearTagBtn = document.getElementById("clearTagBtn");
+const goToChatBtn = document.getElementById("goToChatBtn");
 const tagSaved = document.getElementById("tagSaved");
 
 const downloadBtn = document.getElementById("downloadBtn");
 
+firstNameInput.value = state.name?.firstName || "";
+lastNameInput.value = state.name?.lastName || "";
 q1.value = state.preQuestions.q1 || "";
 q2.value = state.preQuestions.q2 || "";
 q3.value = state.preQuestions.q3 || "";
@@ -66,13 +88,23 @@ function updateCounts(){
   apiStatus.textContent = sendBtn.disabled ? "limit reached" : "ready";
 }
 
-if (state.preQuestions.q1 && state.preQuestions.q2 && state.preQuestions.q3 && state.messages.length) showChat();
+if (state.name?.firstName && state.name?.lastName && state.preQuestions.q1 && state.preQuestions.q2 && state.preQuestions.q3 && state.messages.length) showChat();
 else showWelcome();
 
 startBtn.addEventListener("click", async () => {
   formError.textContent = "";
+  const fn = firstNameInput.value.trim();
+  const ln = lastNameInput.value.trim();
   const a=q1.value.trim(), b=q2.value.trim(), c=q3.value.trim();
-  if(!a||!b||!c){ formError.textContent="Lütfen 3 soruyu da doldurun (required)."; return; }
+  if(!fn || !ln){
+    formError.textContent="Lütfen first name ve last name alanlarını doldurun (required).";
+    return;
+  }
+  if(!a||!b||!c){
+    formError.textContent="Lütfen 3 soruyu da doldurun (required).";
+    return;
+  }
+  state.name = { firstName: fn, lastName: ln };
   state.preQuestions={q1:a,q2:b,q3:c}; persist();
   showChat();
   if(state.messages.length===0) await sendTeacherMessage(c);
@@ -92,7 +124,8 @@ function renderChat(){
     bubble.textContent=m.text;
 
     const meta=el("div","meta");
-    meta.appendChild(el("span","", m.who==="teacher"?"Teacher":"Taylor"));
+    const teacherLabel = (state.name?.firstName || "Teacher");
+    meta.appendChild(el("span","", m.who==="teacher"?teacherLabel:"Taylor"));
     meta.appendChild(el("span","", new Date(m.ts).toLocaleTimeString()));
     bubble.appendChild(meta);
 
@@ -103,6 +136,21 @@ function renderChat(){
     chatLog.appendChild(bubble);
   }
   chatLog.scrollTop=chatLog.scrollHeight;
+}
+
+
+function setChatDisabled(disabled){
+  const chatCard = document.querySelector(".card.chat");
+  if(!chatCard) return;
+  if(disabled){
+    chatCard.classList.add("is-disabled");
+    sendBtn.disabled = true;
+    userInput.disabled = true;
+  }else{
+    chatCard.classList.remove("is-disabled");
+    userInput.disabled = false;
+    updateCounts(); // re-applies limit logic
+  }
 }
 
 function openAnnotation(messageId){
@@ -120,6 +168,7 @@ function openAnnotation(messageId){
   tagComment.value=ann?.comment||"";
   nextIntent.value=ann?.nextIntent||"";
   tagSaved.textContent="";
+  setChatDisabled(true);
 }
 
 sendBtn.addEventListener("click", async ()=>{
@@ -179,9 +228,11 @@ function buildModelMessages(){
 }
 
 async function fetchTaylorReply(){
+  const headers = { "Content-Type": "application/json" };
+  if (state.studyCode) headers["x-study-code"] = state.studyCode;
   const res = await fetch(PROXY_URL, {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
+    headers,
     body: JSON.stringify({ messages: buildModelMessages() })
   });
   if(!res.ok){
@@ -222,11 +273,22 @@ downloadBtn.addEventListener("click", ()=>{
     exportedAt: new Date().toISOString(),
     sessionId: state.sessionId,
     startedAt: state.startedAt,
+    name: state.name,
     preQuestions: state.preQuestions,
     messages: state.messages,
     annotations: state.annotations
   };
   const blob=new Blob([JSON.stringify(exportObj,null,2)], {type:"application/json"});
+
+goToChatBtn.addEventListener("click", ()=>{
+  annotPanel.classList.add("hidden");
+  annotEmpty.classList.remove("hidden");
+  state.selectedTaylorMessageId = null;
+  persist();
+  setChatDisabled(false);
+  userInput.focus();
+});
+
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
   a.href=url;

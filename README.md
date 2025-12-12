@@ -28,3 +28,12 @@ Sağ üstteki **Save / Download** butonu:
 - tüm konuşma
 - tüm tag/comment
 hepsini tek bir `JSON` dosyası olarak indirir.
+
+
+## Güvenlik (önerilen)
+- Rate limit env vars:
+  - `RATE_LIMIT_WINDOW_MS` (default 600000)
+  - `RATE_LIMIT_MAX` (default 40)
+- Opsiyonel erişim kodu:
+  - `STUDY_CODE` set ederseniz backend `x-study-code` header ister.
+  - Kodu kullanıcıya vermek için: `https://YOURAPP.onrender.com/?code=KOD`
