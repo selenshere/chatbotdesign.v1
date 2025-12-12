@@ -91,7 +91,7 @@ function showChat(){ pageWelcome.classList.add("hidden"); pageChat.classList.rem
 
 function teacherMessageCount(){ return state.messages.filter(m=>m.who==="teacher").length; }
 function updateCounts(){
-  msgCount.textContent = `${teacherMessageCount()}/${MAX_TEACHER_MESSAGES}`;
+  //msgCount.textContent = `${teacherMessageCount()}/${MAX_TEACHER_MESSAGES}`;
   const limitReached = teacherMessageCount() >= MAX_TEACHER_MESSAGES;
   sendBtn.disabled = limitReached;
   if (!document.querySelector(".card.chat")?.classList.contains("is-disabled")) {
