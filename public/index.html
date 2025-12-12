@@ -10,7 +10,7 @@
   <header class="topbar">
     <div class="brand">Taylor Task</div>
     <div class="right">
-      <button id="downloadBtn" class="btn secondary" title="Save all">Save / Download</button>
+      <button id="downloadBtn" class="btn secondary" title="Download all data">Save / Download</button>
     </div>
   </header>
 
@@ -21,14 +21,14 @@
       <p>
         In this activity, you will interact with Taylor, a simulated student who has solved the fraction problem you looked at in the previous session.
         Your task in this conversation is to design questions and representations/tools (e.g., fraction bars, number line) to uncover Taylor’s underlying thinking
-        and look for ideas that make sense in Taylor’s reasoning. You have about 5–8 messages to Taylor. Use them thoughtfully.
+        and look for ideas that make sense in Taylor’s reasoning. Use your messages thoughtfully.
       </p>
     </section>
 
 
     <div class="welcomeGrid">
     <section class="card taskCard">
-      <h2>Noticing task (fraction)</h2>
+      <h2>Noticing task (fractions)</h2>
       <p class="muted">Please review the task and Taylor’s work below before starting.</p>
       <div class="taskImageWrapper">
         <img src="images/task.png" alt="Noticing task (fraction) with Taylor's solution and dialogue." />
@@ -88,6 +88,7 @@
             <h2>Chat with Taylor</h2>
           </div>
           <div class="status">
+            <span id="apiStatus" class="pill">ready</span>
           </div>
         </div>
 
@@ -99,42 +100,73 @@
         </div>
 
         <div class="note">
-          Tip: You can open tags/comments on the right side by clicking on Taylor's message bubble.
+          Tip: Click Taylor’s message bubbles to open the analysis panel on the right.
         </div>
       </section>
 
       <!-- RIGHT: TAG/COMMENT -->
       <section class="card annot">
-        <h2>Tag / Comment</h2>
+        <div class="analysisHeader">
+          <h2>Analysis &amp; Comments</h2>
+          <p class="subtle">Tag Taylor's responses to analyze their thinking.</p>
+        </div>
+
         <div id="annotEmpty" class="empty">
-          Click on Taylor's message bubble to open tags/comments.
+          Click a Taylor response → this panel will open.
         </div>
 
         <div id="annotPanel" class="hidden">
           <div class="selectedBox">
-            <div class="label">Selected Taylor message</div>
+            <div class="label">Selected Response:</div>
             <div id="selectedText" class="selectedText"></div>
           </div>
 
           <div class="block">
-            <div class="label">Choose one</div>
-            <label class="radio"><input type="radio" name="tagType" value="Problematic"> Problematic – something you see as incorrect or confusing</label>
-            <label class="radio"><input type="radio" name="tagType" value="Interesting idea"> Interesting idea – something you find noteworthy</label>
-            <label class="radio"><input type="radio" name="tagType" value="Potential strength"> Potential strength – something you could imagine building on in future instruction</label>
+            <div class="label">Tag this response:</div>
+
+            <label class="tagOption danger">
+              <input type="radio" name="tagType" value="Problematic">
+              <span class="tagIcon" aria-hidden="true">⚠️</span>
+              <span class="tagText">
+                <span class="tagTitle">Problematic</span>
+                <span class="tagDesc">Something you see as incorrect or confusing</span>
+              </span>
+            </label>
+
+            <label class="tagOption warn">
+              <input type="radio" name="tagType" value="Interesting idea">
+              <span class="tagIcon" aria-hidden="true">💡</span>
+              <span class="tagText">
+                <span class="tagTitle">Interesting Idea</span>
+                <span class="tagDesc">Something you find noteworthy</span>
+              </span>
+            </label>
+
+            <label class="tagOption ok">
+              <input type="radio" name="tagType" value="Potential strength">
+              <span class="tagIcon" aria-hidden="true">👍</span>
+              <span class="tagText">
+                <span class="tagTitle">Potential Strength</span>
+                <span class="tagDesc">Something you could imagine building on in future instruction</span>
+              </span>
+            </label>
           </div>
 
           <div class="block">
             <label class="label">Why did you tag this? What does it show about Taylor’s thinking?</label>
-            <textarea id="tagComment" rows="3" placeholder="Optional..."></textarea>
+            <textarea id="tagComment" rows="5" placeholder="Explain your reasoning for the tag..."></textarea>
           </div>
 
           <div class="block">
-            <label class="label">Continued conversation: What are you trying to do with your next message to Taylor?</label>
-            <textarea id="nextIntent" rows="2" placeholder="Optional..."></textarea>
+            <label class="label">What are you trying to do with your next message to Taylor?</label>
+            <textarea id="nextIntent" rows="4" placeholder="e.g. I want to see if Taylor can explain the drawing."></textarea>
           </div>
 
           <div class="row">
-            <button id="goToChatBtn" class="btn primary">Go to interaction</button>
+            <button id="goToChatBtn" class="btn primary wide" aria-label="Return to Conversation">
+              <span aria-hidden="true" style="margin-right:10px">↩</span>
+              Return to Conversation
+            </button>
             <div id="tagSaved" class="ok" aria-live="polite"></div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 // Fullstack (Render) version: calls same-origin backend proxy at /api/chat
 const PROXY_URL = "/api/chat";
-// const MAX_TEACHER_MESSAGES = 8;
+// No hard cap on teacher messages.
+const MAX_TEACHER_MESSAGES = Infinity;
 
 const TAYLOR_SYSTEM = `
 Persona: You are Taylor, an 8–9-year-old student (sixth grade) who participated in a classroom activity about fractions.
@@ -65,7 +66,6 @@ const formError = document.getElementById("formError");
 const chatLog = document.getElementById("chatLog");
 const userInput = document.getElementById("userInput");
 const sendBtn = document.getElementById("sendBtn");
-const msgCount = document.getElementById("msgCount");
 const apiStatus = document.getElementById("apiStatus");
 
 const annotEmpty = document.getElementById("annotEmpty");
@@ -91,11 +91,11 @@ function showChat(){ pageWelcome.classList.add("hidden"); pageChat.classList.rem
 
 function teacherMessageCount(){ return state.messages.filter(m=>m.who==="teacher").length; }
 function updateCounts(){
-  //msgCount.textContent = `${teacherMessageCount()}/${MAX_TEACHER_MESSAGES}`;
+  // With Infinity, limitReached will always be false.
   const limitReached = teacherMessageCount() >= MAX_TEACHER_MESSAGES;
   sendBtn.disabled = limitReached;
   if (!document.querySelector(".card.chat")?.classList.contains("is-disabled")) {
-    apiStatus.textContent = limitReached ? "limit reached" : "ready";
+    apiStatus.textContent = "ready";
   }
 }
 
@@ -114,8 +114,8 @@ startBtn.addEventListener("click", async () => {
   const b = q2.value.trim();
   const c = q3.value.trim();
 
-  if (!fn || !ln) { formError.textContent = "Lütfen first name ve last name alanlarını doldurun (required)."; return; }
-  if (!a || !b || !c) { formError.textContent = "Lütfen 3 soruyu da doldurun (required)."; return; }
+  if (!fn || !ln) { formError.textContent = "Please fill in first name and last name (required)."; return; }
+  if (!a || !b || !c) { formError.textContent = "Please answer all 3 questions (required)."; return; }
 
   state.name = { firstName: fn, lastName: ln };
   state.preQuestions = { q1: a, q2: b, q3: c };
@@ -209,7 +209,7 @@ userInput.addEventListener("keydown", (e) => {
 });
 
 async function sendTeacherMessage(text){
-  // if (teacherMessageCount() >= MAX_TEACHER_MESSAGES) return;
+  if (teacherMessageCount() >= MAX_TEACHER_MESSAGES) return;
 
   userInput.value = "";
   state.messages.push({
