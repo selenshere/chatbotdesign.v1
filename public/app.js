@@ -23,6 +23,13 @@ const state = {
   studyCode: ""
 };
 
+// By default, start fresh on page load.
+// To keep previous progress, open with ?resume=1
+const __params = new URLSearchParams(window.location.search);
+if (__params.get("resume") !== "1") {
+  localStorage.removeItem("taylor_task_state");
+}
+
 const saved = localStorage.getItem("taylor_task_state");
 if (saved) {
   try { Object.assign(state, JSON.parse(saved)); } catch {}
@@ -245,8 +252,10 @@ async function fetchTaylorReply(){
   return reply;
 }
 
-saveTagBtn.addEventListener("click", ()=>{
-  const mid=state.selectedTaylorMessageId; if(!mid) return;
+
+function saveCurrentAnnotation(){
+  const mid = state.selectedTaylorMessageId;
+  if(!mid) return;
   const chosen = document.querySelector("input[name='tagType']:checked")?.value || "";
   state.annotations[mid]={
     tagType: chosen,
@@ -255,6 +264,11 @@ saveTagBtn.addEventListener("click", ()=>{
     updatedAt: new Date().toISOString()
   };
   persist();
+}
+
+saveTagBtn.addEventListener("click", ()=>{
+  if(!state.selectedTaylorMessageId) return;
+  saveCurrentAnnotation();
   tagSaved.textContent="Saved ✓";
   setTimeout(()=>tagSaved.textContent="", 1200);
 });
@@ -281,6 +295,10 @@ downloadBtn.addEventListener("click", ()=>{
   const blob=new Blob([JSON.stringify(exportObj,null,2)], {type:"application/json"});
 
 goToChatBtn.addEventListener("click", ()=>{
+  // auto-save (even if empty) when leaving analysis
+  if(state.selectedTaylorMessageId){
+    saveCurrentAnnotation();
+  }
   annotPanel.classList.add("hidden");
   annotEmpty.classList.remove("hidden");
   state.selectedTaylorMessageId = null;
