@@ -19,7 +19,12 @@ body{
 .topbar{
   display:flex; justify-content:space-between; align-items:center;
   padding:14px 18px; border-bottom:1px solid var(--line);
-  position:sticky; top:0; background:rgba(244,247,251,.92); backdrop-filter: blur(10px);
+  position:sticky;
+  top:0;
+  background:rgba(244,247,251,.92);
+  backdrop-filter: blur(10px);
+  /* Keep the header behind the analysis card when scrolling */
+  z-index: 1;
 }
 .brand{font-weight:700; letter-spacing:.2px}
 .page{max-width:1100px; margin:18px auto; padding:0 14px 30px}
@@ -56,7 +61,7 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
 .ok{color:var(--ok); font-weight:650}
 .footer{max-width:1100px; margin:0 auto; padding:0 14px 18px; color:var(--muted); font-size:12px}
 
-.layout{display:grid; grid-template-columns: 1.25fr .9fr; gap:14px}
+.layout{display:grid; grid-template-columns: 1.45fr .85fr; gap:14px}
 @media (max-width: 900px){ .layout{grid-template-columns:1fr} }
 
 .chatHeader{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
@@ -89,9 +94,13 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
 .block{margin:12px 0}
 .radio{display:block; margin:8px 0; color:var(--text)}
 
-/* Analysis & Comments panel (right side) */
-.analysisHeader h2{ margin:0; font-size:34px; letter-spacing:.2px; font-weight:800; }
-.analysisHeader .subtle{ margin:6px 0 0; color:var(--muted); font-size:14px; }
+/* Analysis & Comments panel (right side)
+   Match the overall typography so this panel doesn't feel "different". */
+.analysisHeader h2{ margin:0; font-size:22px; letter-spacing:.2px; font-weight:700; }
+.analysisHeader .subtle{ margin:6px 0 0; color:var(--muted); font-size:12px; }
+
+/* Ensure analysis panel sits above the sticky header when scrolling */
+.card.annot{ position:relative; z-index: 3; }
 
 .tagOption{
   display:flex;
@@ -122,6 +131,18 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
   padding:14px 16px;
   border-radius:12px;
   font-weight:800;
+}
+
+#goToChatBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  filter: grayscale(15%);
+}
+
+#goToChatBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  filter: grayscale(25%);
 }
 
 

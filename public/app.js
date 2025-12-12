@@ -194,8 +194,38 @@ function openAnnotation(messageId){
   nextIntent.value = ann?.nextIntent || "";
   tagSaved.textContent = "";
 
+  // Require tag + both text responses before allowing return.
+  updateGoToChatState();
+
   setChatDisabled(true);
 }
+
+function isAnalysisComplete(){
+  const chosen = document.querySelector("input[name='tagType']:checked")?.value || "";
+  return Boolean(
+    chosen &&
+    tagComment.value.trim().length > 0 &&
+    nextIntent.value.trim().length > 0
+  );
+}
+
+function updateGoToChatState(){
+  if (!goToChatBtn) return;
+  // Only enforce when the annotation panel is open.
+  const panelOpen = !annotPanel.classList.contains("hidden");
+  if (!panelOpen) {
+    goToChatBtn.disabled = false;
+    return;
+  }
+  goToChatBtn.disabled = !isAnalysisComplete();
+}
+
+// Keep the return button state in sync with inputs.
+document.querySelectorAll("input[name='tagType']").forEach(r => {
+  r.addEventListener("change", updateGoToChatState);
+});
+tagComment.addEventListener("input", updateGoToChatState);
+nextIntent.addEventListener("input", updateGoToChatState);
 
 // ---- Sending ----
 sendBtn.addEventListener("click", async () => {
@@ -298,6 +328,11 @@ function saveCurrentAnnotation(){
 // Go to interaction: auto-save + close panel + enable chat
 if (goToChatBtn) {
   goToChatBtn.addEventListener("click", () => {
+    // Safety: should be prevented by the disabled button.
+    if (!isAnalysisComplete()) {
+      tagSaved.textContent = "Please complete the tag and both responses.";
+      return;
+    }
     if (state.selectedTaylorMessageId) {
       saveCurrentAnnotation();
       tagSaved.textContent = "Saved ✓";
