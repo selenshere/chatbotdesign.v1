@@ -1,6 +1,5 @@
 // Fullstack (Render) version: calls same-origin backend proxy at /api/chat
 const PROXY_URL = "/api/chat";
-const MAX_TEACHER_MESSAGES = 8;
 
 const TAYLOR_SYSTEM = `
 Persona: You are Taylor, an 8–9-year-old student (sixth grade) who participated in a classroom activity about fractions.
