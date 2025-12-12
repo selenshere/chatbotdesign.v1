@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Taylor Task Chatbot</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Taylor Task</div>
+    <div class="right">
+      <button id="downloadBtn" class="btn secondary" title="Tüm veriyi indir">Save / Download</button>
+    </div>
+  </header>
+
+  <!-- PAGE 1: WELCOME + FORM -->
+  <main id="pageWelcome" class="page">
+    <section class="card">
+      <h1>Welcome to the Taylor task</h1>
+      <p>
+        In this activity, you will interact with Taylor, a simulated student who has solved the fraction problem you looked at in the previous session.
+        Your task in this conversation is to design questions and representations/tools (e.g., fraction bars, number line) to uncover Taylor’s underlying thinking
+        and look for ideas that make sense in Taylor’s reasoning. You have about 5–8 messages to Taylor. Use them thoughtfully.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Before you start</h2>
+
+      <label class="q">
+        <span>1) What would you most like to understand more deeply about Taylor’s thinking?</span>
+        <textarea id="q1" rows="4" placeholder="Write your answer..."></textarea>
+        <div class="hint">Required</div>
+      </label>
+
+      <label class="q">
+        <span>2) Which tools (e.g., fraction bars, number line, area model), if any, do you want Taylor to be able to use during your conversation? Why?</span>
+        <textarea id="q2" rows="4" placeholder="Write your answer..."></textarea>
+        <div class="hint">Required</div>
+      </label>
+
+      <label class="q">
+        <span>3) Please write your first message to Taylor. Try to start in a way that helps you understand Taylor’s thinking.</span>
+        <textarea id="q3" rows="3" placeholder="Write your first message..."></textarea>
+        <div class="hint">Required</div>
+      </label>
+
+      <div class="row">
+        <button id="startBtn" class="btn primary">İleri (Start Chat)</button>
+        <div id="formError" class="error" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- PAGE 2: CHAT + TAGGING -->
+  <main id="pageChat" class="page hidden">
+    <div class="layout">
+      <!-- LEFT: CHAT -->
+      <section class="card chat">
+        <div class="chatHeader">
+          <div>
+            <h2>Chat with Taylor</h2>
+            <div class="sub">Limit: 8 teacher messages</div>
+          </div>
+          <div class="status">
+            <span id="msgCount">0/8</span>
+            <span id="apiStatus" class="pill">ready</span>
+          </div>
+        </div>
+
+        <div id="chatLog" class="chatLog" aria-live="polite"></div>
+
+        <div class="composer">
+          <textarea id="userInput" rows="2" placeholder="Write to Taylor..."></textarea>
+          <button id="sendBtn" class="btn primary">Send</button>
+        </div>
+
+        <div class="note">
+          Tip: Taylor mesaj baloncuklarına tıklayarak sağ tarafta tag/comment açabilirsiniz.
+        </div>
+      </section>
+
+      <!-- RIGHT: TAG/COMMENT -->
+      <section class="card annot">
+        <h2>Tag / Comment</h2>
+        <div id="annotEmpty" class="empty">
+          Bir Taylor cevabına tıkla → burada tag/comment alanı açılacak.
+        </div>
+
+        <div id="annotPanel" class="hidden">
+          <div class="selectedBox">
+            <div class="label">Selected Taylor message</div>
+            <div id="selectedText" class="selectedText"></div>
+          </div>
+
+          <div class="block">
+            <div class="label">Choose one</div>
+            <label class="radio"><input type="radio" name="tagType" value="Problematic"> Problematic – something you see as incorrect or confusing</label>
+            <label class="radio"><input type="radio" name="tagType" value="Interesting idea"> Interesting idea – something you find noteworthy</label>
+            <label class="radio"><input type="radio" name="tagType" value="Potential strength"> Potential strength – something you could imagine building on in future instruction</label>
+          </div>
+
+          <div class="block">
+            <label class="label">Why did you tag this? What does it show about Taylor’s thinking?</label>
+            <textarea id="tagComment" rows="3" placeholder="Optional..."></textarea>
+          </div>
+
+          <div class="block">
+            <label class="label">Continued conversation: What are you trying to do with your next message to Taylor?</label>
+            <textarea id="nextIntent" rows="2" placeholder="Optional..."></textarea>
+          </div>
+
+          <div class="row">
+            <button id="saveTagBtn" class="btn secondary">Save Tag</button>
+            <button id="clearTagBtn" class="btn ghost">Clear</button>
+            <div id="tagSaved" class="ok" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>Data is stored locally in your browser (until you download).</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
