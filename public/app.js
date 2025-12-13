@@ -1,3 +1,13 @@
+
+function getSessionId() {
+  let sid = localStorage.getItem("chat_session_id");
+  if (!sid) {
+    sid = crypto.randomUUID();
+    localStorage.setItem("chat_session_id", sid);
+  }
+  return sid;
+}
+
 // Fullstack (Render) version: calls same-origin backend proxy at /api/chat
 const PROXY_URL = "/api/chat";
 // No hard cap on teacher messages.
