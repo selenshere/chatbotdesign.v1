@@ -415,20 +415,15 @@ function openModal(html){
 // ---- pop up after submission ----
 const submitBtn = document.getElementById("submitBtn");
 
-if (submitBtn) {
-  submitBtn.addEventListener("click", () => {
-    showSubmitThanks();
-  });
-}
-
 function showSubmitThanks() {
   chatPaused = true;
 
   openModal(`
-    <h2>Thank you!</h2>
-    <p>Your interaction has been successfully completed.</p>
+    <h2>Thank you for your participation</h2>
+    <p>You may now close this window.</p>
   `);
 }
+
 
 // ---- Download ----
 downloadBtn.addEventListener("click", () => {
@@ -474,19 +469,47 @@ downloadBtn.addEventListener("click", () => {
 });
 
 function buildExportFiles() {
-  // BURASI sende zaten var: iki dosyayı indirirken hangi objeleri yazıyorsan onları döndür
-  const conversationJson = JSON.stringify(chatHistory, null, 2);
-  const analysisJson = JSON.stringify(analysisHistory, null, 2);
+  const fn = (state.name?.firstName || "").trim();
+  const ln = (state.name?.lastName || "").trim();
+
+  const safe = (s) => (s || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_\-]/g, "");
+  const base = `${safe(ln) || "Lastname"}_${safe(fn) || "Firstname"}`;
+
+  const teacherLabel = `${fn} ${ln}`.trim() || state.name?.firstName || "Teacher";
+
+  const fullTranscript = state.messages
+    .map(m => `${m.who === "teacher" ? teacherLabel : "Taylor"}: ${m.text}`)
+    .join("\n");
+
+  const exportObj = {
+    exportedAt: new Date().toISOString(),
+    sessionId: state.sessionId,
+    startedAt: state.startedAt,
+    name: state.name,
+    preQuestions: state.preQuestions,
+    messages: state.messages,
+    annotations: state.annotations
+  };
 
   return [
-    { name: "conversation.json", mimeType: "application/json", content: conversationJson },
-    { name: "analysis.json", mimeType: "application/json", content: analysisJson },
+    { name: `${base}_chat.txt`, mimeType: "text/plain;charset=utf-8", content: fullTranscript },
+    { name: `${base}_all.json`, mimeType: "application/json", content: JSON.stringify(exportObj, null, 2) }
   ];
 }
+
+let submitting = false;
 
 async function finishAndSubmit() {
   // chat pause olduğunda API'ye hiçbir şey gitmesin
   if (chatPaused) return;
+  if (submitting) return;
+  submitting = true;
+
+  const btn = document.getElementById("submitBtn");
+  if (btn) btn.disabled = true;
 
   const files = buildExportFiles();
 
@@ -497,23 +520,31 @@ async function finishAndSubmit() {
       name: f.name,
       mimeType: f.mimeType,
       base64: toB64(f.content),
-    })),
+    }))
   };
 
-  const resp = await fetch("/api/submit", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const r = await fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error("Submit failed: " + t);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) {
+      throw new Error(data.error || "Upload failed");
+    }
+
+    // teşekkür popup (kapatılabilir)
+    showSubmitThanks();
+  } catch (e) {
+    // hata olursa tekrar denemeye izin ver
+    submitting = false;
+    if (btn) btn.disabled = false;
+    throw e;
   }
-
-  // teşekkür popup
-  showSubmitThanks();
 }
+
 
 document.getElementById("submitBtn")?.addEventListener("click", () => {
   finishAndSubmit().catch(err => {
