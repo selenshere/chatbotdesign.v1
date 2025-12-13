@@ -149,6 +149,32 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
   opacity: 0.9;
 }
 
+.Btnghost {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.Btnghost:hover {
+  opacity: 0.9;
+}
+
+.Btnsecondary {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.Btnsecondary:hover {
+  opacity: 0.9;
+}
+
 input[type="text"]{
   width:100%;
   border-radius:12px;
