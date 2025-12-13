@@ -76,6 +76,7 @@ const newConvBtn = document.getElementById("newConvBtn");
 firstNameInput.value = state.name?.firstName || "";
 lastNameInput.value = state.name?.lastName || "";
 q1.value = state.preQuestions.q1 || "";
+q2.value = state.preQuestions.q2 || "";
 q3.value = state.preQuestions.q3 || "";
 
 // ---- View helpers ----
@@ -110,20 +111,21 @@ startBtn.addEventListener("click", async () => {
   const fn = firstNameInput.value.trim();
   const ln = lastNameInput.value.trim();
   const a = q1.value.trim();
+  const b = q2.value.trim();
   const c = q3.value.trim();
 
   if (!fn || !ln) { formError.textContent = "Please fill in first name and last name (required)."; return; }
-  if (!a || !c) { formError.textContent = "Please answer both questions (required)."; return; }
+  if (!a || !b || !c) { formError.textContent = "Please answer all 3 questions (required)."; return; }
 
   state.name = { firstName: fn, lastName: ln };
-  state.preQuestions = { q1: a, q3: c };
+  state.preQuestions = { q1: a, q2: b, q3: c };
   persist();
 
   showChat();
 
   // Auto-send first message (q3) if chat is empty
   if (state.messages.length === 0) {
-    await sendTeacherMessage(c);
+    await if (!chatPaused) sendTeacherMessage(c);
   }
 });
 
@@ -235,14 +237,14 @@ nextIntent.addEventListener("input", updateSaveReturnState);
 sendBtn.addEventListener("click", async () => {
   const text = userInput.value.trim();
   if (!text) return;
-  await sendTeacherMessage(text);
+  await if (!chatPaused) sendTeacherMessage(text);
 });
 
 userInput.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") sendBtn.click();
 });
 
-async function sendTeacherMessage(text){
+async function if (!chatPaused) sendTeacherMessage(text){
   if (teacherMessageCount() >= MAX_TEACHER_MESSAGES) return;
 
   userInput.value = "";
