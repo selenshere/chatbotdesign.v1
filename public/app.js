@@ -2,8 +2,6 @@
 const PROXY_URL = "/api/chat";
 // No hard cap on teacher messages.
 const MAX_TEACHER_MESSAGES = Infinity;
-
-// ✅ chatPaused TANIMLI OLMALI (yoksa ReferenceError verir)
 let chatPaused = false;
 
 const TAYLOR_SYSTEM = `
@@ -14,7 +12,6 @@ const state = {
   sessionId: crypto.randomUUID(),
   startedAt: new Date().toISOString(),
   name: { firstName: "", lastName: "" },
-  // ✅ q2 tamamen kaldırıldı
   preQuestions: { q1: "", q3: "" },
   messages: [],         // {id, role, who:'teacher'|'taylor', text, ts}
   annotations: {},      // messageId -> { tagType?, tagWhy?, reasoning, nextIntent, updatedAt }
@@ -474,4 +471,52 @@ downloadBtn.addEventListener("click", () => {
 
   downloadText(fullTranscript, `${base}_chat.txt`);
   downloadText(JSON.stringify(exportObj, null, 2), `${base}_all.json`, "application/json");
+});
+
+function buildExportFiles() {
+  // BURASI sende zaten var: iki dosyayı indirirken hangi objeleri yazıyorsan onları döndür
+  const conversationJson = JSON.stringify(chatHistory, null, 2);
+  const analysisJson = JSON.stringify(analysisHistory, null, 2);
+
+  return [
+    { name: "conversation.json", mimeType: "application/json", content: conversationJson },
+    { name: "analysis.json", mimeType: "application/json", content: analysisJson },
+  ];
+}
+
+async function finishAndSubmit() {
+  // chat pause olduğunda API'ye hiçbir şey gitmesin
+  if (chatPaused) return;
+
+  const files = buildExportFiles();
+
+  const toB64 = (txt) => btoa(unescape(encodeURIComponent(txt)));
+
+  const payload = {
+    files: files.map(f => ({
+      name: f.name,
+      mimeType: f.mimeType,
+      base64: toB64(f.content),
+    })),
+  };
+
+  const resp = await fetch("/api/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error("Submit failed: " + t);
+  }
+
+  // teşekkür popup
+  showSubmitThanks();
+}
+
+document.getElementById("submitBtn")?.addEventListener("click", () => {
+  finishAndSubmit().catch(err => {
+    alert(err.message);
+  });
 });
