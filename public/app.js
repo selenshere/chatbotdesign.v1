@@ -386,6 +386,24 @@ if (newConvBtn) {
   });
 }
 
+// ---- pop up after submission ----
+const submitBtn = document.getElementById("submitBtn");
+
+if (submitBtn) {
+  submitBtn.addEventListener("click", () => {
+    showSubmitThanks();
+  });
+}
+
+function showSubmitThanks() {
+  chatPaused = true;
+
+  openModal(`
+    <h2>Thank you!</h2>
+    <p>Your interaction has been successfully completed.</p>
+  `);
+}
+
 // ---- Download ----
 downloadBtn.addEventListener("click", () => {
   const fn = (state.name?.firstName || "").trim();
