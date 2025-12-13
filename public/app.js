@@ -110,14 +110,13 @@ startBtn.addEventListener("click", async () => {
   const fn = firstNameInput.value.trim();
   const ln = lastNameInput.value.trim();
   const a = q1.value.trim();
-  const b = q2.value.trim();
   const c = q3.value.trim();
 
   if (!fn || !ln) { formError.textContent = "Please fill in first name and last name (required)."; return; }
-  if (!a || !b || !c) { formError.textContent = "Please answer all 3 questions (required)."; return; }
+  if (!a || !c) { formError.textContent = "Please answer both questions (required)."; return; }
 
   state.name = { firstName: fn, lastName: ln };
-  state.preQuestions = { q1: a, q2: b, q3: c };
+  state.preQuestions = { q1: a, q3: c };
   persist();
 
   showChat();
