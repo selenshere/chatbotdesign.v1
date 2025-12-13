@@ -78,10 +78,23 @@
     </div>
   </main>
 
-  <!-- PAGE 2: CHAT + TAGGING -->
+  <!-- PAGE 2: TASK (LEFT) + CHAT (RIGHT) -->
   <main id="pageChat" class="page hidden">
-    <div class="layout">
-      <!-- LEFT: CHAT -->
+    <div class="layout split">
+      <!-- LEFT: TASK IMAGE (DRAG & DROP) -->
+      <section class="card taskPane">
+        <div class="taskHeader">
+          <h2>Task</h2>
+          <div class="subtle">Drag &amp; drop an image to replace the task (optional).</div>
+        </div>
+        <div id="taskDropzone" class="taskDropzone" tabindex="0" role="button" aria-label="Upload task image (drag and drop or click)">
+          <img id="taskImg" src="images/task.png" alt="Task image" />
+          <div class="dropHint">Drop image here or click to upload</div>
+          <input id="taskFile" type="file" accept="image/*" hidden />
+        </div>
+      </section>
+
+      <!-- RIGHT: CHAT -->
       <section class="card chat">
         <div class="chatHeader">
           <div>
@@ -99,80 +112,87 @@
           <button id="sendBtn" class="btn primary">Send</button>
         </div>
 
-        <div class="note">
-          Tip: Click Taylor’s message bubbles to open the analysis panel on the right.
-        </div>
-      </section>
-
-      <!-- RIGHT: TAG/COMMENT -->
-      <section class="card annot">
-        <div class="analysisHeader">
-          <h2>Analysis &amp; Comments</h2>
-          <p class="subtle">Tag Taylor's responses to analyze their thinking.</p>
-        </div>
-
-        <div id="annotEmpty" class="empty">
-          When Taylor writes something that feels important, click on it and then this panel will open. You will tag Taylor's answer and You may also add a short comment explaining what this tells you about Taylor’s thinking.
-        </div>
-
-        <div id="annotPanel" class="hidden">
-          <div class="selectedBox">
-            <div class="label">Selected Response:</div>
-            <div id="selectedText" class="selectedText"></div>
-          </div>
-
-          <div class="block">
-            <div class="label">Tag this response:</div>
-
-            <label class="tagOption danger">
-              <input type="radio" name="tagType" value="Problematic">
-              <span class="tagIcon" aria-hidden="true"></span>
-              <span class="tagText">
-                <span class="tagTitle">Problematic</span>
-                <span class="tagDesc">Something you see as incorrect or confusing</span>
-              </span>
-            </label>
-
-            <label class="tagOption warn">
-              <input type="radio" name="tagType" value="Interesting idea">
-              <span class="tagIcon" aria-hidden="true"></span>
-              <span class="tagText">
-                <span class="tagTitle">Interesting Idea</span>
-                <span class="tagDesc">Something you find noteworthy</span>
-              </span>
-            </label>
-
-            <label class="tagOption ok">
-              <input type="radio" name="tagType" value="Potential strength">
-              <span class="tagIcon" aria-hidden="true"></span>
-              <span class="tagText">
-                <span class="tagTitle">Potential Strength</span>
-                <span class="tagDesc">Something you could imagine building on in future instruction</span>
-              </span>
-            </label>
-          </div>
-
-          <div class="block">
-            <label class="label">Why did you tag this? What does it show about Taylor’s thinking?</label>
-            <textarea id="tagComment" rows="5" placeholder="Write your answer..."></textarea>
-          </div>
-
-          <div class="block">
-            <label class="label">What are you trying to do with your next message to Taylor?</label>
-            <textarea id="nextIntent" rows="4" placeholder="Write your answer..."></textarea>
-          </div>
-
-          <div class="row">
-            <button id="goToChatBtn" class="btn primary wide" aria-label="Return to Conversation">
-              <span aria-hidden="true" style="margin-right:10px">↩</span>
-              Return to Conversation
-            </button>
-            <div id="tagSaved" class="ok" aria-live="polite"></div>
-          </div>
-        </div>
+        <div class="note">After Taylor replies, an analysis panel will pop up automatically.</div>
       </section>
     </div>
   </main>
+
+  <!-- ANALYSIS POPUP (opens after each Taylor response) -->
+  <div id="analysisModal" class="modal hidden" aria-hidden="true">
+    <div class="modalBackdrop" data-close="true"></div>
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="analysisTitle">
+      <div class="modalHeader">
+        <h2 id="analysisTitle">Analysis &amp; Comments</h2>
+        <button id="closeAnalysisX" class="iconBtn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <!-- OPTIONAL: Selection + Tag -->
+        <details id="optionalSection" open>
+          <summary>
+            Optional
+            <span class="pill subtlePill">optional</span>
+          </summary>
+
+          <div class="block">
+            <label class="labelRow">
+              <span class="label">Selection</span>
+              <span class="hint optional">Optional</span>
+            </label>
+            <div class="selectedBox optionalBox">
+              <div id="selectedText" class="selectedText"></div>
+            </div>
+          </div>
+
+          <div class="block">
+            <label class="labelRow">
+              <span class="label">Tag (optional)</span>
+              <span class="hint optional">Optional</span>
+            </label>
+            <select id="tagType" class="select">
+              <option value="">—</option>
+              <option value="Problematic">Problematic</option>
+              <option value="Interesting idea">Interesting idea</option>
+              <option value="Potential strength">Potential strength</option>
+            </select>
+          </div>
+
+          <div class="block">
+            <label class="labelRow">
+              <span class="label">Why did you tag this? What does it show about Taylor’s thinking?</span>
+              <span class="hint optional">Optional</span>
+            </label>
+            <textarea id="tagComment" rows="4" placeholder="Write your answer (optional)..."></textarea>
+          </div>
+        </details>
+
+        <!-- REQUIRED QUESTIONS -->
+        <div class="block">
+          <label class="labelRow">
+            <span class="label">What does it show about Taylor’s reasoning?</span>
+            <span class="hint required">Required</span>
+          </label>
+          <textarea id="reasoningComment" rows="4" placeholder="Write your answer..."></textarea>
+        </div>
+
+        <div class="block">
+          <label class="labelRow">
+            <span class="label">What are you trying to do with your next message to Taylor?</span>
+            <span class="hint required">Required</span>
+          </label>
+          <textarea id="nextIntent" rows="4" placeholder="Write your answer..."></textarea>
+        </div>
+      </div>
+
+      <div class="modalFooter">
+        <button id="saveAndReturnBtn" class="btn primary wide" disabled>
+          <span aria-hidden="true" style="margin-right:10px">↩</span>
+          Save &amp; return to chat
+        </button>
+        <div id="tagSaved" class="ok" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
 
   <footer class="footer">
     <span>Data is stored locally in your browser (until you download).</span>

@@ -12,8 +12,9 @@ const state = {
   name: { firstName: "", lastName: "" },
   preQuestions: { q1: "", q2: "", q3: "" },
   messages: [],         // {id, role, who:'teacher'|'taylor', text, ts}
-  annotations: {},      // messageId -> { tagType, comment, nextIntent, updatedAt }
+  annotations: {},      // taylorMessageId -> { selectionText?, tagType?, thinkingComment?, reasoningComment, nextIntent, updatedAt }
   selectedTaylorMessageId: null,
+  taskImageDataUrl: "", // optional user-uploaded task image (data URL)
   studyCode: ""         // optional
 };
 
@@ -60,13 +61,21 @@ const userInput = document.getElementById("userInput");
 const sendBtn = document.getElementById("sendBtn");
 const apiStatus = document.getElementById("apiStatus");
 
-const annotEmpty = document.getElementById("annotEmpty");
-const annotPanel = document.getElementById("annotPanel");
+// Task image (left) — drag & drop / click upload
+const taskDropzone = document.getElementById("taskDropzone");
+const taskImg = document.getElementById("taskImg");
+const taskFile = document.getElementById("taskFile");
+
+// Analysis modal
+const analysisModal = document.getElementById("analysisModal");
+const closeAnalysisX = document.getElementById("closeAnalysisX");
+const saveAndReturnBtn = document.getElementById("saveAndReturnBtn");
 const selectedText = document.getElementById("selectedText");
+const tagType = document.getElementById("tagType");
 const tagComment = document.getElementById("tagComment");
+const reasoningComment = document.getElementById("reasoningComment");
 const nextIntent = document.getElementById("nextIntent");
 const tagSaved = document.getElementById("tagSaved");
-const goToChatBtn = document.getElementById("goToChatBtn");
 
 const downloadBtn = document.getElementById("downloadBtn");
 
@@ -144,7 +153,8 @@ function renderChat(){
 
     if (m.who === "taylor") {
       bubble.dataset.mid = m.id;
-      bubble.addEventListener("click", () => openAnnotation(m.id));
+      // Allow re-opening analysis for any Taylor message
+      bubble.addEventListener("click", () => openAnalysis(m.id, { auto: false }));
     }
 
     chatLog.appendChild(bubble);
@@ -167,57 +177,127 @@ function setChatDisabled(disabled){
   }
 }
 
-function openAnnotation(messageId){
+// ---- Task image (drag & drop / click) ----
+function applyTaskImage(){
+  if (!taskImg) return;
+  const src = (state.taskImageDataUrl || "").trim() || "images/task.png";
+  taskImg.src = src;
+}
+
+applyTaskImage();
+
+function handleTaskFile(file){
+  if (!file || !file.type || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.taskImageDataUrl = (reader.result || "").toString();
+    persist();
+    applyTaskImage();
+  };
+  reader.readAsDataURL(file);
+}
+
+if (taskDropzone) {
+  taskDropzone.addEventListener("click", () => taskFile?.click());
+  taskDropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    taskDropzone.classList.add("is-dragover");
+  });
+  taskDropzone.addEventListener("dragleave", () => taskDropzone.classList.remove("is-dragover"));
+  taskDropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    taskDropzone.classList.remove("is-dragover");
+    const f = e.dataTransfer?.files?.[0];
+    handleTaskFile(f);
+  });
+}
+if (taskFile) {
+  taskFile.addEventListener("change", () => {
+    const f = taskFile.files?.[0];
+    handleTaskFile(f);
+    taskFile.value = "";
+  });
+}
+
+// ---- Analysis modal helpers ----
+function showAnalysisModal(auto = true){
+  if (!analysisModal) return;
+  analysisModal.classList.remove("hidden");
+  analysisModal.setAttribute("aria-hidden", "false");
+  setChatDisabled(true);
+  updateSaveState();
+  // If it popped up automatically, move cursor to the first required box.
+  if (auto) setTimeout(() => reasoningComment?.focus(), 50);
+}
+
+function hideAnalysisModal(){
+  if (!analysisModal) return;
+  analysisModal.classList.add("hidden");
+  analysisModal.setAttribute("aria-hidden", "true");
+  setChatDisabled(false);
+  state.selectedTaylorMessageId = null;
+  persist();
+  userInput?.focus();
+}
+
+// Close actions
+if (analysisModal) {
+  analysisModal.addEventListener("click", (e) => {
+    const t = e.target;
+    if (t && t.dataset && t.dataset.close === "true") {
+      // Don't allow closing without required fields.
+      if (!isAnalysisComplete()) {
+        tagSaved.textContent = "Please complete the required questions before returning to chat.";
+        return;
+      }
+      saveAndReturnBtn?.click();
+    }
+  });
+}
+closeAnalysisX?.addEventListener("click", () => {
+  if (!isAnalysisComplete()) {
+    tagSaved.textContent = "Please complete the required questions before returning to chat.";
+    return;
+  }
+  saveAndReturnBtn?.click();
+});
+
+function openAnalysis(messageId, { auto } = { auto: true }){
+  const msg = state.messages.find(m => m.id === messageId && m.who === "taylor");
+  if (!msg) return;
+
   state.selectedTaylorMessageId = messageId;
   persist();
 
-  const msg = state.messages.find(m => m.id === messageId);
-  if (!msg) return;
-
-  annotEmpty.classList.add("hidden");
-  annotPanel.classList.remove("hidden");
+  // Populate optional selection
   selectedText.textContent = msg.text;
 
   const ann = state.annotations[messageId] || null;
-  document.querySelectorAll("input[name='tagType']").forEach(r => {
-    r.checked = ann ? (r.value === ann.tagType) : false;
-  });
-  tagComment.value = ann?.comment || "";
+  tagType.value = ann?.tagType || "";
+  tagComment.value = ann?.thinkingComment || "";
+  reasoningComment.value = ann?.reasoningComment || "";
   nextIntent.value = ann?.nextIntent || "";
   tagSaved.textContent = "";
 
-  // Require tag + both text responses before allowing return.
-  updateGoToChatState();
-
-  setChatDisabled(true);
+  showAnalysisModal(auto);
 }
 
 function isAnalysisComplete(){
-  const chosen = document.querySelector("input[name='tagType']:checked")?.value || "";
   return Boolean(
-    chosen &&
-    tagComment.value.trim().length > 0 &&
+    reasoningComment.value.trim().length > 0 &&
     nextIntent.value.trim().length > 0
   );
 }
 
-function updateGoToChatState(){
-  if (!goToChatBtn) return;
-  // Only enforce when the annotation panel is open.
-  const panelOpen = !annotPanel.classList.contains("hidden");
-  if (!panelOpen) {
-    goToChatBtn.disabled = false;
-    return;
-  }
-  goToChatBtn.disabled = !isAnalysisComplete();
+function updateSaveState(){
+  if (!saveAndReturnBtn) return;
+  saveAndReturnBtn.disabled = !isAnalysisComplete();
 }
 
-// Keep the return button state in sync with inputs.
-document.querySelectorAll("input[name='tagType']").forEach(r => {
-  r.addEventListener("change", updateGoToChatState);
-});
-tagComment.addEventListener("input", updateGoToChatState);
-nextIntent.addEventListener("input", updateGoToChatState);
+tagType.addEventListener("change", updateSaveState);
+tagComment.addEventListener("input", updateSaveState);
+reasoningComment.addEventListener("input", updateSaveState);
+nextIntent.addEventListener("input", updateSaveState);
 
 // ---- Sending ----
 sendBtn.addEventListener("click", async () => {
@@ -259,6 +339,12 @@ async function sendTeacherMessage(text){
     persist();
     renderChat();
     apiStatus.textContent = "ready";
+
+    // After Taylor replies, open analysis automatically
+    const lastTaylor = state.messages[state.messages.length - 1];
+    if (lastTaylor?.who === "taylor") {
+      openAnalysis(lastTaylor.id, { auto: true });
+    }
   } catch (err) {
     console.error(err);
     apiStatus.textContent = "error";
@@ -302,40 +388,33 @@ async function fetchTaylorReply(){
   return reply;
 }
 
-// ---- Annotation save ----
+// ---- Analysis save (modal) ----
 function saveCurrentAnnotation(){
   const mid = state.selectedTaylorMessageId;
   if (!mid) return;
 
-  const chosen = document.querySelector("input[name='tagType']:checked")?.value || "";
   state.annotations[mid] = {
-    tagType: chosen,
-    comment: tagComment.value.trim(),
-    nextIntent: nextIntent.value.trim(),
+    selectionText: (selectedText?.textContent || "").trim(),
+    tagType: (tagType?.value || "").trim(),
+    thinkingComment: (tagComment?.value || "").trim(),
+    reasoningComment: (reasoningComment?.value || "").trim(),
+    nextIntent: (nextIntent?.value || "").trim(),
     updatedAt: new Date().toISOString()
   };
   persist();
 }
 
-// Go to interaction: auto-save + close panel + enable chat
-if (goToChatBtn) {
-  goToChatBtn.addEventListener("click", () => {
-    // Safety: should be prevented by the disabled button.
+if (saveAndReturnBtn) {
+  saveAndReturnBtn.addEventListener("click", () => {
     if (!isAnalysisComplete()) {
-      tagSaved.textContent = "Please complete the tag and both responses.";
+      tagSaved.textContent = "Please complete the required questions.";
+      updateSaveState();
       return;
     }
-    if (state.selectedTaylorMessageId) {
-      saveCurrentAnnotation();
-      tagSaved.textContent = "Saved ✓";
-      setTimeout(() => (tagSaved.textContent = ""), 900);
-    }
-    annotPanel.classList.add("hidden");
-    annotEmpty.classList.remove("hidden");
-    state.selectedTaylorMessageId = null;
-    persist();
-    setChatDisabled(false);
-    userInput.focus();
+    saveCurrentAnnotation();
+    tagSaved.textContent = "Saved ✓";
+    setTimeout(() => (tagSaved.textContent = ""), 700);
+    hideAnalysisModal();
   });
 }
 
