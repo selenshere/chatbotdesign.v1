@@ -11,6 +11,7 @@
   --shadow: rgba(15, 23, 42, .08);
 }
 *{box-sizing:border-box}
+{box-sizing:border-box}
 body{
   margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
   background:var(--bg); color:var(--text);
@@ -60,7 +61,7 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
 .ok{color:var(--ok); font-weight:650}
 .footer{max-width:1100px; margin:0 auto; padding:0 14px 18px; color:var(--muted); font-size:12px}
 
-.layout{display:grid; grid-template-columns: .95fr 1.05fr; gap:14px}
+.layout{display:grid; grid-template-columns: 1fr 1fr; gap:14px}
 @media (max-width: 900px){ .layout{grid-template-columns:1fr} }
 
 .chatHeader{display:flex; justify-content:space-between; align-items:flex-start; gap:12px}
@@ -88,34 +89,52 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
 
 .selectedBox{border:1px solid var(--line); background:#f8fafc; border-radius:14px; padding:10px; margin:10px 0}
 .label{font-size:12px; color:var(--muted); margin-bottom:6px}
+.label.req::after{ content:" *"; color: var(--danger); font-weight:800; }
 .selectedText{font-weight:650; line-height:1.35}
 .block{margin:12px 0}
 .radio{display:block; margin:8px 0; color:var(--text)}
 
-/* Wide primary buttons */
+/* Analysis */
+.analysisHeader h2{ margin:0; font-size:22px; letter-spacing:.2px; font-weight:700; }
+.analysisHeader .subtle{ margin:6px 0 0; color:var(--muted); font-size:12px; }
+
+.label.req::after{ content:" • required"; color: var(--danger); font-weight:700; }
+
+.tagOption{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  padding:6px 0;
+  border:none;
+  background:transparent;
+  margin:16px 0;
+  cursor:pointer;
+}
+.tagOption input{ margin-top:5px; width:18px; height:18px; accent-color: var(--primary); }
+.tagText{ display:flex; flex-direction:column; gap:2px; }
+.tagTitle{ font-weight:800; }
+.tagDesc{ color:var(--muted); font-size:13px; }
+
+.tagOption.danger .tagTitle{ color:var(--danger); }
+.tagOption.warn .tagTitle{ color:#b45309; }
+.tagOption.ok .tagTitle{ color:var(--ok); }
+
 .btn.wide{ width:100%; justify-content:center; }
 
-/* Plain select (no color coding) */
-.select{
-  width:100%;
+/* Match the screenshot-like save/return button */
+#saveReturnBtn{
+  background: rgba(37,99,235,.35);
+  border-color: rgba(37,99,235,.25);
+  padding:14px 16px;
   border-radius:12px;
-  padding:10px 12px;
-  border:1px solid var(--line);
-  background:#f8fafc;
-  color:var(--text);
-  outline:none;
+  font-weight:800;
 }
-.select:focus{ border-color: rgba(37,99,235,.45); }
 
-/* Required/optional labels */
-.labelRow{ display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
-.hint.required{ color: var(--danger); font-weight:700; }
-.hint.optional{ color: var(--muted); }
-
-/* Optional section styling */
-details summary{ cursor:pointer; font-weight:750; }
-.subtlePill{ background: rgba(155,176,201,.10); }
-.optionalBox{ opacity: .95; }
+#saveReturnBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  filter: grayscale(15%);
+}
 
 
 input[type="text"]{
@@ -135,98 +154,39 @@ input[type="text"]:focus{border-color:rgba(37,99,235,.45)}
 }
 @media (max-width: 700px){ .nameRow{grid-template-columns:1fr} }
 
-.chat.is-disabled{
-  /* Keep chat readable while paused */
-  opacity: 1;
-}
-.chat.is-disabled .composer{
-  /* Hard-disable composing while keeping the log fully readable */
-  pointer-events:none;
-  opacity: .55;
-}
-.chat.is-disabled::after{
-  /* A lightweight banner instead of a full-screen wash */
-  content:"Analysis mode: chat paused";
+.chat{ position:relative; }
+.chat.is-disabled .composer{ pointer-events:none; }
+
+/* Overlay (analysis + thanks) */
+.taskPane{ position:relative; }
+.overlay{
   position:absolute;
-  left:16px; right:16px;
-  top:72px;
-  height:44px;
-  border-radius:12px;
-  background:rgba(244,247,251,.92);
-  border:1px solid var(--line);
+  inset: 0;
+  background: rgba(244,247,251,.65);
+  border-radius:16px;
   display:flex;
   align-items:center;
   justify-content:center;
-  color:var(--muted);
-  font-weight:800;
-  pointer-events:none;
+  padding:12px;
+  z-index: 5;
 }
-.chat{ position:relative; }
+.overlay.hidden{ display:none; }
+.overlayCard{
+  width: 100%;
+  max-width: 560px;
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  box-shadow: 0 16px 40px var(--shadow);
+}
 
-/* Task dropzone (drag & drop) */
-.taskDropzone{
-  position:relative;
-  border-radius:14px;
-  border:1px dashed var(--line);
-  padding:10px;
-  background:#f8fafc;
-  cursor:pointer;
+/* Thanks overlay covers the whole pageChat */
+#thanksOverlay{
+  position:fixed;
+  inset:0;
+  border-radius:0;
 }
-.taskDropzone img{
-  width:100%;
-  border-radius:12px;
-  border:1px solid var(--line);
-  background:#ffffff;
-  display:block;
-}
-.dropHint{
-  position:absolute;
-  left:12px; right:12px; bottom:12px;
-  border-radius:999px;
-  padding:8px 10px;
-  border:1px solid var(--line);
-  background:rgba(244,247,251,.90);
-  color:var(--muted);
-  font-size:12px;
-  text-align:center;
-}
-.taskDropzone.is-dragover{ outline: 2px solid rgba(37,99,235,.25); }
-
-/* Modal */
-.taskPane{ position:relative; }
-
-/* Analysis popup lives INSIDE the left task pane so chat stays visible. */
-.modal{ position:absolute; inset:0; z-index:50; }
-.modalBackdrop{ position:absolute; inset:0; background: rgba(15,23,42,.18); }
-.modalCard{
-  position:relative;
-  width: calc(100% - 20px);
-  margin: 10px;
-  background: linear-gradient(180deg,var(--card),var(--card2));
-  border:1px solid var(--line);
-  border-radius:18px;
-  box-shadow: 0 24px 60px rgba(15,23,42,.25);
-  overflow:hidden;
-}
-.modalHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:14px 16px;
-  border-bottom:1px solid var(--line);
-}
-.modalHeader h2{ margin:0; font-size:20px; font-weight:800; }
-.iconBtn{
-  border:1px solid var(--line);
-  background:#f8fafc;
-  border-radius:12px;
-  padding:8px 10px;
-  cursor:pointer;
-  font-weight:800;
-}
-.modalBody{ padding: 14px 16px; max-height: calc(100% - 150px); overflow:auto; }
-.modalFooter{ padding: 14px 16px; border-top:1px solid var(--line); display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-#saveAndReturnBtn:disabled{ opacity:.55; cursor:not-allowed; }
 
 
 /* Task image card */

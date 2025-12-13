@@ -53,32 +53,8 @@ app.post("/api/chat", rateLimit, async (req, res) => {
       if (got !== requiredCode) return res.status(401).send("Unauthorized (missing/invalid study code).");
     }
 
-    // Client should send ONLY chat messages (teacher/user + Taylor/assistant).
-    // We intentionally ignore any non-chat payload (analysis, selections, images, UI state, etc.)
-    // to keep token usage and privacy risks low.
     const { messages } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) return res.status(400).send("Missing messages array.");
-
-    // Short, cheap system prompt (v1-style). Keep this on the server so the browser never ships it.
-    const SYSTEM_PROMPT = (
-      "You are Taylor, an 8–9-year-old student working on a fractions shading task. " +
-      "Speak in simple, child-like language and sometimes make mistakes. " +
-      "When asked about shading 1/4 then 1/6 of a circle split into 12 parts, you may add 4 and 6 to get 10 and say '1/10', " +
-      "but you also sometimes mention 10/12 when denominators match. " +
-      "Keep replies to 1–3 short sentences and stay in character."
-    );
-
-    // Filter down to chat-only messages, and cap the amount of history we forward.
-    // (This reduces rate-limit risk while keeping recent context.)
-    const chatOnly = messages
-      .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-      .map(m => ({ role: m.role, content: m.content.trim() }))
-      .filter(m => m.content.length > 0);
-
-    if (chatOnly.length === 0) return res.status(400).send("No chat messages provided.");
-
-    const HISTORY_CAP = parseInt(process.env.HISTORY_CAP || "24", 10); // last N messages
-    const capped = chatOnly.slice(-HISTORY_CAP);
 
     const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
@@ -90,7 +66,7 @@ app.post("/api/chat", rateLimit, async (req, res) => {
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...capped],
+        messages,
         temperature: 0.7,
         max_tokens: 120
       })
@@ -104,42 +80,6 @@ app.post("/api/chat", rateLimit, async (req, res) => {
     const data = await upstream.json();
     const reply = data?.choices?.[0]?.message?.content ?? "";
     return res.json({ reply });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send("Server error");
-  }
-});
-
-// ---- Event logging proxy (to Google Apps Script / Sheets) ----
-// Set env GOOGLE_SCRIPT_URL to the deployed Apps Script Web App URL.
-// Body: { events: [...] }
-app.post("/api/log", async (req, res) => {
-  try {
-    const url = process.env.GOOGLE_SCRIPT_URL;
-    if (!url) return res.status(204).send(); // logging disabled
-
-    const requiredCode = process.env.STUDY_CODE;
-    if (requiredCode) {
-      const got = (req.headers["x-study-code"] || req.body?.studyCode || "").toString().trim();
-      if (got !== requiredCode) return res.status(401).send("Unauthorized (missing/invalid study code).");
-    }
-
-    const { events } = req.body || {};
-    if (!Array.isArray(events) || events.length === 0) return res.json({ ok: true, dropped: true });
-
-    const upstream = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ events })
-    });
-
-    if (!upstream.ok) {
-      const txt = await upstream.text().catch(() => "");
-      return res.status(502).send(txt || "Logging upstream error");
-    }
-
-    const txt = await upstream.text().catch(() => "");
-    return res.status(200).send(txt || "ok");
   } catch (err) {
     console.error(err);
     return res.status(500).send("Server error");
