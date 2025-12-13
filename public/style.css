@@ -149,7 +149,7 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
   opacity: 0.9;
 }
 
-.Btnghost {
+.btn.ghost {
   background: #000;
   color: #fff;
   border: none;
@@ -158,11 +158,11 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
   cursor: pointer;
 }
 
-.Btnghost:hover {
+.btn.ghost:hover {
   opacity: 0.9;
 }
 
-.Btnsecondary {
+.btn.secondary {
   background: #000;
   color: #fff;
   border: none;
@@ -171,7 +171,7 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
   cursor: pointer;
 }
 
-.Btnsecondary:hover {
+.btn.secondary:hover {
   opacity: 0.9;
 }
 
