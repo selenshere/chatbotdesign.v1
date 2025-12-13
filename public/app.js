@@ -135,10 +135,20 @@ function teacherMessageCount(){ return state.messages.filter(m=>m.who==="teacher
 function updateCounts(){
   // With Infinity, limitReached will always be false.
   const limitReached = teacherMessageCount() >= MAX_TEACHER_MESSAGES;
-  sendBtn.disabled = limitReached;
-  if (!document.querySelector(".card.chat")?.classList.contains("is-disabled")) {
-    apiStatus.textContent = "ready";
+  const hardPaused = Boolean(state.analysisGate?.required) ||
+    document.querySelector(".card.chat")?.classList.contains("is-disabled");
+
+  // Never allow updateCounts() to re-enable the composer while analysis is required.
+  if (hardPaused) {
+    sendBtn.disabled = true;
+    userInput.disabled = true;
+    apiStatus.textContent = "paused";
+    return;
   }
+
+  sendBtn.disabled = limitReached;
+  userInput.disabled = false;
+  apiStatus.textContent = "ready";
 }
 
 if (state.name?.firstName && state.name?.lastName && state.preQuestions.q1 && state.preQuestions.q2 && state.messages.length) {
@@ -397,6 +407,9 @@ async function sendTeacherMessage(text){
     if (lastTaylor?.who === "taylor") {
       state.analysisGate = { required: true, pendingTaylorId: lastTaylor.id };
       persist();
+      // IMPORTANT: Lock chat immediately when analysis is required,
+      // even if the modal fails to render for any reason.
+      setChatDisabled(true);
       openAnalysis(lastTaylor.id, { auto: true });
     }
   } catch (err) {
@@ -424,11 +437,9 @@ async function sendTeacherMessage(text){
     persist();
     renderChat();
   }
-  // Re-enable composer if analysis mode isn't active.
-  if (!analysisModal || analysisModal.classList.contains("hidden")) {
-    userInput.disabled = false;
-    updateCounts();
-  }
+  // Never manually re-enable here; use the hard gate.
+  // If analysis is required, chat must remain disabled.
+  setChatDisabled(false);
 }
 
 function buildModelMessages(){
