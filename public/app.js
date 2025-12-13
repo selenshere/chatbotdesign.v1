@@ -366,13 +366,7 @@ downloadBtn.addEventListener("click", () => {
     .map(m => `${m.who === "teacher" ? teacherLabel : "Taylor"}: ${m.text}`)
     .join("\n");
 
-  // 2) Teacher-only input transcript (all user inputs)
-  const userOnlyTranscript = state.messages
-    .filter(m => m.who === "teacher")
-    .map(m => m.text)
-    .join("\n");
-
-  // 3) Full export as JSON (includes pre-questions + annotations)
+  // 2) Full export as JSON (includes pre-questions + annotations)
   const exportObj = {
     exportedAt: new Date().toISOString(),
     sessionId: state.sessionId,
@@ -396,6 +390,5 @@ downloadBtn.addEventListener("click", () => {
   };
 
   downloadText(fullTranscript, `${base}_chat.txt`);
-  downloadText(userOnlyTranscript, `${base}_all.txt`);
-  downloadText(JSON.stringify(exportObj, null, 2), `taylor_task_${state.sessionId}.json`, "application/json");
+  downloadText(JSON.stringify(exportObj, null, 2), `${base}_all.json`, "application/json");
 });
