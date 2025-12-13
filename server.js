@@ -17,13 +17,14 @@ const MAX_REQ = parseInt(process.env.RATE_LIMIT_MAX || "40", 10);
 const hits = new Map(); // ip -> {count, resetAt}
 
 function rateLimit(req, res, next) {
-  const ip =
+    const ip = (
     req.headers["x-session-id"] ||
     (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "")
       .toString()
       .split(",")[0]
       .trim() ||
-    "unknown";
+    "unknown"
+  );
   const now = Date.now();
   const rec = hits.get(ip);
   if (!rec || now > rec.resetAt) {

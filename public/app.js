@@ -1,4 +1,3 @@
-
 function getSessionId() {
   let sid = localStorage.getItem("chat_session_id");
   if (!sid) {
@@ -620,7 +619,10 @@ async function finishAndSubmit() {
 
   const resp = await fetch("/api/submit", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-session-id": getSessionId()
+    },
     body: JSON.stringify(payload),
   });
 
