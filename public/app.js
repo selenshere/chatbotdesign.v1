@@ -123,8 +123,8 @@ startBtn.addEventListener("click", async () => {
   showChat();
 
   // Auto-send first message (q3) if chat is empty
-  if (state.messages.length === 0) {
-    await if (!chatPaused) sendTeacherMessage(c);
+  if (state.messages.length === 0 && !chatPaused) {
+  await sendTeacherMessage(c);
   }
 });
 
