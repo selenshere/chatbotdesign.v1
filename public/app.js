@@ -349,23 +349,41 @@ if (goToChatBtn) {
 
 // ---- Download ----
 downloadBtn.addEventListener("click", () => {
-  const exportObj = {
-    exportedAt: new Date().toISOString(),
-    sessionId: state.sessionId,
-    startedAt: state.startedAt,
-    name: state.name,
-    preQuestions: state.preQuestions,
-    messages: state.messages,
-    annotations: state.annotations
+  const fn = (state.name?.firstName || "").trim();
+  const ln = (state.name?.lastName || "").trim();
+
+  // Filename: lastname_firstname_chat / lastname_firstname_all
+  const safe = (s) => (s || "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_\-]/g, "");
+  const base = `${safe(ln) || "Lastname"}_${safe(fn) || "Firstname"}`;
+
+  const teacherLabel = `${fn} ${ln}`.trim() || (state.name?.firstName || "Teacher") || "Teacher";
+
+  // 1) Full transcript with labels
+  const fullTranscript = state.messages
+    .map(m => `${m.who === "teacher" ? teacherLabel : "Taylor"}: ${m.text}`)
+    .join("\n");
+
+  // 2) Compact transcript: only user's (teacher's) messages
+  const userOnlyTranscript = state.messages
+    .filter(m => m.who === "teacher")
+    .map(m => m.text)
+    .join("\n");
+
+  const downloadText = (text, filename) => {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
-  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type:"application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `taylor_task_${state.sessionId}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  downloadText(fullTranscript, `${base}_chat.txt`);
+  downloadText(userOnlyTranscript, `${base}_all.txt`);
 });
