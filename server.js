@@ -2,6 +2,7 @@ import express from "express";
 import { google } from "googleapis";
 import stream from "stream";
 
+const chatRateLimit = new Map();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -69,7 +70,7 @@ app.post("/api/chat", rateLimit, async (req, res) => {
         model,
         messages,
         temperature: 0.7,
-        max_tokens: 120
+        max_tokens: 150
       })
     });
 
