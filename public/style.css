@@ -136,24 +136,29 @@ input[type="text"]:focus{border-color:rgba(37,99,235,.45)}
 @media (max-width: 700px){ .nameRow{grid-template-columns:1fr} }
 
 .chat.is-disabled{
-  opacity:.65;
+  /* Keep chat readable while paused */
+  opacity: 1;
 }
 .chat.is-disabled .composer{
+  /* Hard-disable composing while keeping the log fully readable */
   pointer-events:none;
-  filter: grayscale(15%);
+  opacity: .55;
 }
 .chat.is-disabled::after{
+  /* A lightweight banner instead of a full-screen wash */
   content:"Analysis mode: chat paused";
   position:absolute;
-  inset: 72px 16px 16px 16px;
-  border-radius:14px;
-  background:rgba(244,247,251,.65);
-  border:1px dashed var(--line);
+  left:16px; right:16px;
+  top:72px;
+  height:44px;
+  border-radius:12px;
+  background:rgba(244,247,251,.92);
+  border:1px solid var(--line);
   display:flex;
   align-items:center;
   justify-content:center;
   color:var(--muted);
-  font-weight:700;
+  font-weight:800;
   pointer-events:none;
 }
 .chat{ position:relative; }
