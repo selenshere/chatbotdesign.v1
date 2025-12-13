@@ -1,19 +1,14 @@
 // Fullstack (Render) version: calls same-origin backend proxy at /api/chat
 const PROXY_URL = "/api/chat";
+const LOG_URL = "/api/log";
 // No hard cap on teacher messages.
 const MAX_TEACHER_MESSAGES = Infinity;
-// IMPORTANT: We send the full conversation history to preserve consistency.
+// IMPORTANT: We send only chatbot messages (teacher + Taylor). We do NOT send
+// analysis annotations, selections, tags, images, or other UI state to the model.
 
-const TAYLOR_SYSTEM = `
-
-Persona: You are Taylor, an 8–9-year-old student (sixth grade) who participated in a classroom activity about fractions.
-Aim: Your goal is to respond to the teacher’s questions so preservice teacher can understand how you think about the addition operation using mathematical symbols and diagrams of fractions.
-In the given question, there is a circle diagram divided into 12 equal parts, and you are asked to do the following: Shade the first 1/4 of the circle and then 1/6 of the circle. What fraction of the circle have you shaded in total?
-You approached the task of shading 1/4 and 1/6 of a circle by coloring four and six parts of the whole. You then combined the shaded pieces simply by counting them, concluding that 4 + 6 = 10 and interpreting the result as “1/10.”
-You also know a rule: 4/12 + 6/12 = 10/12 when denominators are the same, so your symbolic reasoning may conflict with your diagram reasoning.
-Recipients: Your audience is a preservice teacher who wants to analyse your reasoning.
-Theme: Use simple, child-like language that may sound uncertain or inconsistent. Be uncertain, make mistakes, and explain them simply. Treat unequal parts as valid fractions. Let your diagram reasoning and symbolic reasoning conflict if necessary. Continue naturally from whatever question the teacher asks next. Show what you think makes sense, even if it is mathematically incorrect. Keep your tone natural and informal. Respond in 1–3 short sentences. Do not use long explanations. Stay in character as Taylor at all times.
-`.trim();
+// Note: The Taylor system prompt lives on the SERVER (server.js) so the browser
+// never ships it. This keeps client payloads small and avoids duplicating prompt
+// tokens unnecessarily.
 // ---- State ----
 const state = {
   sessionId: crypto.randomUUID(),
@@ -32,11 +27,16 @@ const state = {
   studyCode: ""         // optional
 };
 
-// By default, start fresh on page load.
-// To keep previous progress, open with ?resume=1
+// URL params
+//  - reset=1  -> force a brand-new session (clears this device's saved draft)
+//  - code=... -> optional study code passthrough
 const __params = new URLSearchParams(window.location.search);
-if (__params.get("resume") !== "1") {
+if (__params.get("reset") === "1") {
   localStorage.removeItem("taylor_task_state");
+  localStorage.removeItem("taylor_event_queue");
+  __params.delete("reset");
+  const clean = window.location.pathname + (__params.toString() ? "?" + __params.toString() : "");
+  window.history.replaceState({}, "", clean);
 }
 
 // Restore (optional)
@@ -45,6 +45,67 @@ if (saved) {
   try { Object.assign(state, JSON.parse(saved)); } catch {}
 }
 function persist(){ localStorage.setItem("taylor_task_state", JSON.stringify(state)); }
+
+// ---- Event logging (best-effort, no data loss) ----
+// We keep a local queue so refresh/offline won't lose data.
+function qLoad(){
+  try { return JSON.parse(localStorage.getItem("taylor_event_queue") || "[]"); } catch { return []; }
+}
+function qSave(q){
+  localStorage.setItem("taylor_event_queue", JSON.stringify(q.slice(-5000))); // cap
+}
+function enqueueEvent(eventType, data){
+  const q = qLoad();
+  q.push({
+    sessionId: state.sessionId,
+    clientTs: new Date().toISOString(),
+    eventType,
+    data: data || {},
+    userAgent: navigator.userAgent
+  });
+  qSave(q);
+  flushQueue();
+}
+
+let __flushing = false;
+async function flushQueue(){
+  if (__flushing) return;
+  if (!navigator.onLine) return;
+  const q = qLoad();
+  if (!q.length) return;
+  __flushing = true;
+  try {
+    // Send in small batches
+    while (q.length) {
+      const batch = q.slice(0, 25);
+      const res = await fetch(LOG_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-study-code": (state.studyCode||"") },
+        body: JSON.stringify({ events: batch })
+      });
+      if (!res.ok) break; // keep queue; try again later
+      q.splice(0, batch.length);
+      qSave(q);
+    }
+  } catch {
+    // keep queue
+  } finally {
+    __flushing = false;
+  }
+}
+
+window.addEventListener("online", flushQueue);
+
+// If we restored an existing session, note it (best-effort).
+if (saved) {
+  enqueueEvent("session_resumed", {
+    sessionId: state.sessionId,
+    messageCount: state.messages?.length || 0
+  });
+}
+
+// Try flushing any queued events early.
+setTimeout(flushQueue, 250);
 
 // Optional study code support:
 // - If you deploy with STUDY_CODE on server, set code by visiting: /?code=YOURCODE
@@ -91,6 +152,7 @@ const nextIntent = document.getElementById("nextIntent");
 const tagSaved = document.getElementById("tagSaved");
 
 const downloadBtn = document.getElementById("downloadBtn");
+const newSessionBtn = document.getElementById("newSessionBtn");
 
 // ---- Init inputs ----
 firstNameInput.value = state.name?.firstName || "";
@@ -106,6 +168,21 @@ function showChat(){
   renderChat();
   updateCounts();
   enforceAnalysisGateOnLoad();
+}
+
+function startNewSession(){
+  // Best-effort: log that the user intentionally reset.
+  enqueueEvent("session_reset", {
+    fromSessionId: state.sessionId,
+    messageCount: state.messages?.length || 0
+  });
+  // Clear local draft + queued events for this device.
+  localStorage.removeItem("taylor_task_state");
+  localStorage.removeItem("taylor_event_queue");
+  // Reload with reset=1 so the URL-state cleanup path runs.
+  const u = new URL(window.location.href);
+  u.searchParams.set("reset", "1");
+  window.location.href = u.toString();
 }
 
 function isAnnotationCompleteFor(messageId){
@@ -180,6 +257,11 @@ startBtn.addEventListener("click", async () => {
   state.preQuestions = { q1: a, q2: b };
   persist();
 
+  enqueueEvent("session_started", {
+    name: state.name,
+    preQuestions: state.preQuestions
+  });
+
   showChat();
 
   // Auto-send first message (q2) if chat is empty
@@ -187,6 +269,15 @@ startBtn.addEventListener("click", async () => {
     await sendTeacherMessage(b);
   }
 });
+
+// ---- New session ----
+if (newSessionBtn) {
+  newSessionBtn.addEventListener("click", () => {
+    const ok = confirm("Start a new session? This will clear the saved draft on this device.");
+    if (!ok) return;
+    startNewSession();
+  });
+}
 
 // ---- Rendering ----
 function el(tag, cls, text){
@@ -253,6 +344,12 @@ function handleTaskFile(file){
     state.taskImageDataUrl = (reader.result || "").toString();
     persist();
     applyTaskImage();
+    enqueueEvent("task_image_updated", {
+      filename: file.name || "",
+      size: file.size || null,
+      type: file.type || "image",
+      hasCustomImage: true
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -393,6 +490,7 @@ async function sendTeacherMessage(text){
     text,
     ts: new Date().toISOString()
   });
+  enqueueEvent("teacher_message_sent", { text });
   persist();
   renderChat();
   // While we fetch Taylor's reply, pause the chat UI (prevents double-sends).
@@ -408,6 +506,7 @@ async function sendTeacherMessage(text){
       text: taylorText,
       ts: new Date().toISOString()
     });
+    enqueueEvent("taylor_message_received", { text: taylorText });
     persist();
     renderChat();
     apiStatus.textContent = "ready";
@@ -418,6 +517,7 @@ async function sendTeacherMessage(text){
       state.analysisGate = { required: true, pendingTaylorId: lastTaylor.id };
       persist();
       setChatDisabled(true);
+      enqueueEvent("analysis_required", { taylorMessageId: lastTaylor.id });
       openAnalysis(lastTaylor.id, { auto: true });
     }
   } catch (err) {
@@ -435,6 +535,7 @@ async function sendTeacherMessage(text){
         text: "(I can't answer right now — the system is rate-limited. Please try again later.)",
         ts: new Date().toISOString()
       });
+      enqueueEvent("taylor_message_received", { text: "(rate limited)", error: "429" });
     } else {
       apiStatus.textContent = "error";
       state.messages.push({
@@ -444,6 +545,7 @@ async function sendTeacherMessage(text){
         text: "(Connection error. Please try again.)",
         ts: new Date().toISOString()
       });
+      enqueueEvent("taylor_message_received", { text: "(connection error)", error: "network" });
     }
     persist();
     renderChat();
@@ -452,6 +554,7 @@ async function sendTeacherMessage(text){
     state.analysisGate = { required: true, pendingTaylorId: errTaylorId };
     persist();
     setChatDisabled(true);
+    enqueueEvent("analysis_required", { taylorMessageId: errTaylorId });
     openAnalysis(errTaylorId, { auto: true });
   }
   // Do NOT re-enable the chat composer here.
@@ -459,8 +562,8 @@ async function sendTeacherMessage(text){
 }
 
 function buildModelMessages(){
-  const msgs = [{ role:"system", content: TAYLOR_SYSTEM }];
-  // Send the full conversation history to preserve consistency.
+  // Only chat history (teacher/user + Taylor/assistant). No analysis fields.
+  const msgs = [];
   for (const m of state.messages) {
     msgs.push({ role: m.who==="teacher" ? "user" : "assistant", content: m.text });
   }
@@ -511,6 +614,13 @@ if (saveAndReturnBtn) {
       return;
     }
     saveCurrentAnnotation();
+    enqueueEvent("analysis_submitted", {
+      taylorMessageId: state.selectedTaylorMessageId,
+      tagType: (tagType?.value || ""),
+      reasoningComment: reasoningComment.value,
+      nextIntent: nextIntent.value,
+      thinkingComment: tagComment.value
+    });
     // Unlock chat only after required analysis is saved.
     state.analysisGate = { required: false, pendingTaylorId: null };
     persist();
@@ -522,6 +632,7 @@ if (saveAndReturnBtn) {
 
 // ---- Download ----
 downloadBtn.addEventListener("click", () => {
+  enqueueEvent("download_clicked", { messageCount: state.messages.length });
   const fn = (state.name?.firstName || "").trim();
   const ln = (state.name?.lastName || "").trim();
 
@@ -549,6 +660,10 @@ downloadBtn.addEventListener("click", () => {
     messages: state.messages,
     annotations: state.annotations
   };
+
+  // Also send a transcript snapshot to the server (best-effort).
+  // If offline, this will queue and flush when back online.
+  enqueueEvent("transcript_snapshot", exportObj);
 
   const downloadText = (text, filename, mime = "text/plain;charset=utf-8") => {
     const blob = new Blob([text], { type: mime });
