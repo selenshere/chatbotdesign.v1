@@ -1,4 +1,6 @@
 import express from "express";
+import { google } from "googleapis";
+import stream from "stream";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,7 +12,6 @@ app.use(express.json({ limit: "1mb" }));
 // Env:
 //  - RATE_LIMIT_WINDOW_MS (default 600000 = 10 min)
 //  - RATE_LIMIT_MAX (default 40)
-// Notes: Render free plan may run a single instance. This is best-effort, not a distributed limiter.
 const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "600000", 10);
 const MAX_REQ = parseInt(process.env.RATE_LIMIT_MAX || "40", 10);
 const hits = new Map(); // ip -> {count, resetAt}
@@ -93,4 +94,74 @@ app.get("*", (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+});
+
+function getServiceAccountCreds() {
+  // Render env'de JSON'u aynen tuttuysan:
+  return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+}
+
+async function getDriveClient() {
+  const creds = getServiceAccountCreds();
+
+  const auth = new google.auth.JWT(
+    creds.client_email,
+    null,
+    creds.private_key,
+    ["https://www.googleapis.com/auth/drive.file"]
+  );
+
+  await auth.authorize();
+  return google.drive({ version: "v3", auth });
+}
+
+function bufferFromBase64(maybeDataUrlOrB64) {
+  const b64 = maybeDataUrlOrB64.includes(",")
+    ? maybeDataUrlOrB64.split(",")[1]
+    : maybeDataUrlOrB64;
+  return Buffer.from(b64, "base64");
+}
+
+app.post("/api/submit", express.json({ limit: "25mb" }), async (req, res) => {
+  try {
+    const { files } = req.body; 
+    // files: [{ name, mimeType, base64 }, ...]
+
+    if (!Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({ ok: false, error: "files missing" });
+    }
+
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (!folderId) {
+      return res.status(500).json({ ok: false, error: "GOOGLE_DRIVE_FOLDER_ID missing" });
+    }
+
+    const drive = await getDriveClient();
+    const uploaded = [];
+
+    for (const f of files) {
+      const buf = bufferFromBase64(f.base64);
+
+      const pass = new stream.PassThrough();
+      pass.end(buf);
+
+      const r = await drive.files.create({
+        requestBody: {
+          name: f.name,
+          parents: [folderId],
+        },
+        media: {
+          mimeType: f.mimeType || "application/octet-stream",
+          body: pass,
+        },
+        fields: "id,name,webViewLink",
+      });
+
+      uploaded.push(r.data);
+    }
+
+    res.json({ ok: true, uploaded });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: String(e) });
+  }
 });
