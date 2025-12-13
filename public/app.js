@@ -376,7 +376,7 @@ downloadBtn.addEventListener("click", () => {
     preQuestions: state.preQuestions,
     messages: state.messages,
     annotations: state.annotations
-  };
+  }};
 
   const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type:"application/json" });
   const url = URL.createObjectURL(blob);
