@@ -28,8 +28,8 @@
 
     <div class="welcomeGrid">
     <section class="card taskCard">
-      <h2>Noticing task (fractions)</h2>
-      <p class="muted">Please review the task and Taylor’s work below before starting.</p>
+      <h2>Task and Taylor's solution (fractions)</h2>
+      <p class="muted">Please review the task and Taylor’s solution below before starting.</p>
       <div class="taskImageWrapper">
         <img src="images/task.png" alt="Noticing task (fraction) with Taylor's solution and dialogue." />
       </div>
@@ -112,7 +112,7 @@
         </div>
 
         <div id="annotEmpty" class="empty">
-          Click a Taylor response → this panel will open.
+          When Taylor writes something that feels important, click on it and then this panel will open. You will tag Taylor's answer and You may also add a short comment explaining what this tells you about Taylor’s thinking.
         </div>
 
         <div id="annotPanel" class="hidden">
@@ -126,7 +126,7 @@
 
             <label class="tagOption danger">
               <input type="radio" name="tagType" value="Problematic">
-              <span class="tagIcon" aria-hidden="true">⚠️</span>
+              <span class="tagIcon" aria-hidden="true"></span>
               <span class="tagText">
                 <span class="tagTitle">Problematic</span>
                 <span class="tagDesc">Something you see as incorrect or confusing</span>
@@ -135,7 +135,7 @@
 
             <label class="tagOption warn">
               <input type="radio" name="tagType" value="Interesting idea">
-              <span class="tagIcon" aria-hidden="true">💡</span>
+              <span class="tagIcon" aria-hidden="true"></span>
               <span class="tagText">
                 <span class="tagTitle">Interesting Idea</span>
                 <span class="tagDesc">Something you find noteworthy</span>
@@ -144,7 +144,7 @@
 
             <label class="tagOption ok">
               <input type="radio" name="tagType" value="Potential strength">
-              <span class="tagIcon" aria-hidden="true">👍</span>
+              <span class="tagIcon" aria-hidden="true"></span>
               <span class="tagText">
                 <span class="tagTitle">Potential Strength</span>
                 <span class="tagDesc">Something you could imagine building on in future instruction</span>
@@ -154,12 +154,12 @@
 
           <div class="block">
             <label class="label">Why did you tag this? What does it show about Taylor’s thinking?</label>
-            <textarea id="tagComment" rows="5" placeholder="Explain your reasoning for the tag..."></textarea>
+            <textarea id="tagComment" rows="5" placeholder="Write your answer..."></textarea>
           </div>
 
           <div class="block">
             <label class="label">What are you trying to do with your next message to Taylor?</label>
-            <textarea id="nextIntent" rows="4" placeholder="e.g. I want to see if Taylor can explain the drawing."></textarea>
+            <textarea id="nextIntent" rows="4" placeholder="Write your answer..."></textarea>
           </div>
 
           <div class="row">
