@@ -97,21 +97,22 @@ app.listen(PORT, () => {
 });
 
 function getServiceAccountCreds() {
-  // Render env'de JSON'u aynen tuttuysan:
-  return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  // Deprecated: Service Accounts cannot upload to personal "My Drive".
+  // Kept only to avoid breaking older deployments.
+  return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON || "null");
 }
 
 async function getDriveClient() {
-  const creds = getServiceAccountCreds();
+  // OAuth (personal Drive) auth
+  const { GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN } = process.env;
+  if (!GOOGLE_OAUTH_CLIENT_ID || !GOOGLE_OAUTH_CLIENT_SECRET || !GOOGLE_OAUTH_REFRESH_TOKEN) {
+    throw new Error(
+      "Missing OAuth env vars. Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN."
+    );
+  }
 
-  const auth = new google.auth.JWT(
-    creds.client_email,
-    null,
-    creds.private_key,
-    ["https://www.googleapis.com/auth/drive.file"]
-  );
-
-  await auth.authorize();
+  const auth = new google.auth.OAuth2(GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET);
+  auth.setCredentials({ refresh_token: GOOGLE_OAUTH_REFRESH_TOKEN });
   return google.drive({ version: "v3", auth });
 }
 

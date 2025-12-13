@@ -412,30 +412,31 @@ function openModal(html){
   box.querySelector("#__modalCloseBtn").addEventListener("click", () => wrap.remove());
 }
 
-// ---- pop up after submission ----
+// ---- Submit: Drive upload + popup (double-click safe) ----
 const submitBtn = document.getElementById("submitBtn");
+let submitting = false;
 
 function showSubmitThanks() {
   chatPaused = true;
-
   openModal(`
     <h2>Thank you for your participation</h2>
-    <p>You may now close this window.</p>
   `);
 }
 
-
 // ---- Download ----
-downloadBtn.addEventListener("click", () => {
+function safeBaseName() {
   const fn = (state.name?.firstName || "").trim();
   const ln = (state.name?.lastName || "").trim();
-
   const safe = (s) => (s || "")
     .trim()
     .replace(/\s+/g, "_")
     .replace(/[^a-zA-Z0-9_\-]/g, "");
-  const base = `${safe(ln) || "Lastname"}_${safe(fn) || "Firstname"}`;
+  return `${safe(ln) || "Lastname"}_${safe(fn) || "Firstname"}`;
+}
 
+function buildExportFiles() {
+  const fn = (state.name?.firstName || "").trim();
+  const ln = (state.name?.lastName || "").trim();
   const teacherLabel = `${fn} ${ln}`.trim() || state.name?.firstName || "Teacher";
 
   const fullTranscript = state.messages
@@ -451,6 +452,17 @@ downloadBtn.addEventListener("click", () => {
     messages: state.messages,
     annotations: state.annotations
   };
+
+  const base = safeBaseName();
+  return [
+    { name: `${base}_chat.txt`, mimeType: "text/plain", content: fullTranscript },
+    { name: `${base}_all.json`, mimeType: "application/json", content: JSON.stringify(exportObj, null, 2) },
+  ];
+}
+
+// ---- Download (cihaza indirmeye DEVAM) ----
+downloadBtn.addEventListener("click", () => {
+  const files = buildExportFiles();
 
   const downloadText = (text, filename, mime = "text/plain;charset=utf-8") => {
     const blob = new Blob([text], { type: mime });
@@ -464,52 +476,17 @@ downloadBtn.addEventListener("click", () => {
     URL.revokeObjectURL(url);
   };
 
-  downloadText(fullTranscript, `${base}_chat.txt`);
-  downloadText(JSON.stringify(exportObj, null, 2), `${base}_all.json`, "application/json");
+  for (const f of files) {
+    downloadText(f.content, f.name, f.mimeType);
+  }
 });
-
-function buildExportFiles() {
-  const fn = (state.name?.firstName || "").trim();
-  const ln = (state.name?.lastName || "").trim();
-
-  const safe = (s) => (s || "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9_\-]/g, "");
-  const base = `${safe(ln) || "Lastname"}_${safe(fn) || "Firstname"}`;
-
-  const teacherLabel = `${fn} ${ln}`.trim() || state.name?.firstName || "Teacher";
-
-  const fullTranscript = state.messages
-    .map(m => `${m.who === "teacher" ? teacherLabel : "Taylor"}: ${m.text}`)
-    .join("\n");
-
-  const exportObj = {
-    exportedAt: new Date().toISOString(),
-    sessionId: state.sessionId,
-    startedAt: state.startedAt,
-    name: state.name,
-    preQuestions: state.preQuestions,
-    messages: state.messages,
-    annotations: state.annotations
-  };
-
-  return [
-    { name: `${base}_chat.txt`, mimeType: "text/plain;charset=utf-8", content: fullTranscript },
-    { name: `${base}_all.json`, mimeType: "application/json", content: JSON.stringify(exportObj, null, 2) }
-  ];
-}
-
-let submitting = false;
 
 async function finishAndSubmit() {
   // chat pause olduğunda API'ye hiçbir şey gitmesin
   if (chatPaused) return;
   if (submitting) return;
   submitting = true;
-
-  const btn = document.getElementById("submitBtn");
-  if (btn) btn.disabled = true;
+  if (submitBtn) submitBtn.disabled = true;
 
   const files = buildExportFiles();
 
@@ -520,34 +497,29 @@ async function finishAndSubmit() {
       name: f.name,
       mimeType: f.mimeType,
       base64: toB64(f.content),
-    }))
+    })),
   };
 
-  try {
-    const r = await fetch("/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+  const resp = await fetch("/api/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || !data.ok) {
-      throw new Error(data.error || "Upload failed");
-    }
-
-    // teşekkür popup (kapatılabilir)
-    showSubmitThanks();
-  } catch (e) {
-    // hata olursa tekrar denemeye izin ver
-    submitting = false;
-    if (btn) btn.disabled = false;
-    throw e;
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error("Submit failed: " + t);
   }
+
+  // teşekkür popup
+  showSubmitThanks();
 }
 
-
-document.getElementById("submitBtn")?.addEventListener("click", () => {
+submitBtn?.addEventListener("click", () => {
   finishAndSubmit().catch(err => {
+    // hata olursa tekrar denemeye izin ver
+    submitting = false;
+    if (submitBtn) submitBtn.disabled = false;
     alert(err.message);
   });
 });

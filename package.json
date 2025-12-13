@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "googleapis": "^137.0.0"
+    "googleapis": "^156.0.0"
   },
   "engines": {
     "node": ">=18"
