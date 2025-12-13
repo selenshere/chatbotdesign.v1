@@ -76,7 +76,6 @@ const newConvBtn = document.getElementById("newConvBtn");
 firstNameInput.value = state.name?.firstName || "";
 lastNameInput.value = state.name?.lastName || "";
 q1.value = state.preQuestions.q1 || "";
-q2.value = state.preQuestions.q2 || "";
 q3.value = state.preQuestions.q3 || "";
 
 // ---- View helpers ----
