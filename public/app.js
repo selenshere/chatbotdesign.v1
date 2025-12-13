@@ -164,7 +164,6 @@ const pageChat = document.getElementById("pageChat");
 const firstNameInput = document.getElementById("firstName");
 const lastNameInput = document.getElementById("lastName");
 const q1 = document.getElementById("q1");
-// ✅ q2 kaldırıldı
 const q3 = document.getElementById("q3");
 const startBtn = document.getElementById("startBtn");
 const formError = document.getElementById("formError");
@@ -214,7 +213,6 @@ function updateCounts(){
   }
 }
 
-// ✅ q2 şarttan kaldırıldı
 if (state.name?.firstName && state.name?.lastName && state.preQuestions.q1 && state.preQuestions.q3) {
   showChat();
 } else {
@@ -467,32 +465,6 @@ if (saveReturnBtn) {
     closeAnalysis();
   });
 }
-
-// ---- Finish (Bitti) ----
-function openThanks(){
-  if (!thanksOverlay) return;
-  thanksOverlay.classList.remove("hidden");
-  thanksOverlay.setAttribute("aria-hidden", "false");
-}
-function closeThanks(){
-  if (!thanksOverlay) return;
-  thanksOverlay.classList.add("hidden");
-  thanksOverlay.setAttribute("aria-hidden", "true");
-}
-
-if (finishBtn) {
-  finishBtn.addEventListener("click", () => {
-    state.completed = true;
-    persist();
-    openThanks();
-  });
-}
-if (thanksCloseBtn) {
-  thanksCloseBtn.addEventListener("click", () => {
-    closeThanks();
-  });
-}
-
 // ---- Start a new conversation (reset) ----
 if (newConvBtn) {
   newConvBtn.addEventListener("click", () => {
