@@ -188,13 +188,15 @@ input[type="text"]:focus{border-color:rgba(37,99,235,.45)}
 .taskDropzone.is-dragover{ outline: 2px solid rgba(37,99,235,.25); }
 
 /* Modal */
-.modal{ position:fixed; inset:0; z-index:50; }
-.modalBackdrop{ position:absolute; inset:0; background: rgba(15,23,42,.35); }
+.taskPane{ position:relative; }
+
+/* Analysis popup lives INSIDE the left task pane so chat stays visible. */
+.modal{ position:absolute; inset:0; z-index:50; }
+.modalBackdrop{ position:absolute; inset:0; background: rgba(15,23,42,.18); }
 .modalCard{
   position:relative;
-  max-width: 820px;
-  width: calc(100% - 28px);
-  margin: 48px auto;
+  width: calc(100% - 20px);
+  margin: 10px;
   background: linear-gradient(180deg,var(--card),var(--card2));
   border:1px solid var(--line);
   border-radius:18px;
@@ -217,7 +219,7 @@ input[type="text"]:focus{border-color:rgba(37,99,235,.45)}
   cursor:pointer;
   font-weight:800;
 }
-.modalBody{ padding: 14px 16px; max-height: calc(100vh - 210px); overflow:auto; }
+.modalBody{ padding: 14px 16px; max-height: calc(100% - 150px); overflow:auto; }
 .modalFooter{ padding: 14px 16px; border-top:1px solid var(--line); display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
 #saveAndReturnBtn:disabled{ opacity:.55; cursor:not-allowed; }
 
