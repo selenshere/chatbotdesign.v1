@@ -136,6 +136,18 @@ textarea:focus{border-color:rgba(74,163,255,.7)}
   filter: grayscale(15%);
 }
 
+.primaryBtn {
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+}
 
 input[type="text"]{
   width:100%;
