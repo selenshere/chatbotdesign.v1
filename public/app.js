@@ -359,15 +359,20 @@ downloadBtn.addEventListener("click", () => {
     .replace(/[^a-zA-Z0-9_\-]/g, "");
   const base = `${safe(ln) || "Lastname"}_${safe(fn) || "Firstname"}`;
 
-  const teacherLabel = `${fn} ${ln}`.trim() || (state.name?.firstName || "Teacher") || "Teacher";
+  const teacherLabel = `${fn} ${ln}`.trim() || state.name?.firstName || "Teacher";
 
   // 1) Full transcript with labels
   const fullTranscript = state.messages
     .map(m => `${m.who === "teacher" ? teacherLabel : "Taylor"}: ${m.text}`)
     .join("\n");
 
-  // 2) All inputs
-  downloadBtn.addEventListener("click", () => {
+  // 2) Teacher-only input transcript (all user inputs)
+  const userOnlyTranscript = state.messages
+    .filter(m => m.who === "teacher")
+    .map(m => m.text)
+    .join("\n");
+
+  // 3) Full export as JSON (includes pre-questions + annotations)
   const exportObj = {
     exportedAt: new Date().toISOString(),
     sessionId: state.sessionId,
@@ -376,20 +381,10 @@ downloadBtn.addEventListener("click", () => {
     preQuestions: state.preQuestions,
     messages: state.messages,
     annotations: state.annotations
-  }});
+  };
 
-  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type:"application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `taylor_task_${state.sessionId}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-
-  const downloadText = (text, filename) => {
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const downloadText = (text, filename, mime = "text/plain;charset=utf-8") => {
+    const blob = new Blob([text], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -402,4 +397,5 @@ downloadBtn.addEventListener("click", () => {
 
   downloadText(fullTranscript, `${base}_chat.txt`);
   downloadText(userOnlyTranscript, `${base}_all.txt`);
+  downloadText(JSON.stringify(exportObj, null, 2), `taylor_task_${state.sessionId}.json`, "application/json");
 });
