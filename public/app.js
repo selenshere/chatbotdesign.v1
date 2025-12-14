@@ -492,7 +492,7 @@ if (saveReturnBtn) {
     closeAnalysis();
   });
 }
- ---- Start a new conversation (reset) ----
+ //---- Start a new conversation (reset) ----
  if (newConvBtn) {
   newConvBtn.addEventListener("click", () => {
     localStorage.removeItem("taylor_task_state");
