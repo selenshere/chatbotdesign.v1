@@ -498,7 +498,7 @@ if (saveReturnBtn) {
 //    localStorage.removeItem("taylor_task_state");
 //    window.location.href = window.location.pathname;
 //  });
-}
+//}
 
 // ---- Simple modal helper ----
 function openModal(html){
