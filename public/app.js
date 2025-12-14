@@ -345,6 +345,19 @@ tagWhy.addEventListener("input", updateSaveReturnState);
 reasoning.addEventListener("input", updateSaveReturnState);
 nextIntent.addEventListener("input", updateSaveReturnState);
 
+document.querySelectorAll("input[name='tagType']").forEach((r) => {
+  let wasChecked = false;
+  r.addEventListener("pointerdown", () => {
+    wasChecked = r.checked;
+  });
+  r.addEventListener("click", () => {
+    if (wasChecked) {
+      r.checked = false;
+      r.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+});
+
 // ---- Sending ----
 sendBtn.addEventListener("click", async () => {
   const text = userInput.value.trim();
@@ -466,16 +479,15 @@ if (saveReturnBtn) {
   });
 }
 // ---- Start a new conversation (reset) ----
-if (newConvBtn) {
-  newConvBtn.addEventListener("click", () => {
-    localStorage.removeItem("taylor_task_state");
-    window.location.href = window.location.pathname;
-  });
+// if (newConvBtn) {
+//  newConvBtn.addEventListener("click", () => {
+//    localStorage.removeItem("taylor_task_state");
+//    window.location.href = window.location.pathname;
+//  });
 }
 
-// ---- Simple modal helper (openModal yoktu → eklendi) ----
+// ---- Simple modal helper ----
 function openModal(html){
-  // Eğer kendi modalın varsa bunu kaldırıp kendi fonksiyonunu kullan.
   const wrap = document.createElement("div");
   wrap.style.position = "fixed";
   wrap.style.inset = "0";
