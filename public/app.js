@@ -492,13 +492,13 @@ if (saveReturnBtn) {
     closeAnalysis();
   });
 }
-// ---- Start a new conversation (reset) ----
-// if (newConvBtn) {
-//  newConvBtn.addEventListener("click", () => {
-//    localStorage.removeItem("taylor_task_state");
-//    window.location.href = window.location.pathname;
-//  });
-//}
+ ---- Start a new conversation (reset) ----
+ if (newConvBtn) {
+  newConvBtn.addEventListener("click", () => {
+    localStorage.removeItem("taylor_task_state");
+    window.location.href = window.location.pathname;
+  });
+}
 
 // ---- Simple modal helper ----
 function openModal(html){
