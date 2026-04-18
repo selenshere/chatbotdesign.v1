@@ -1,6 +1,11 @@
 import express from "express";
 import { google } from "googleapis";
 import stream from "stream";
+import cors from "cors";
+
+app.use(cors({
+  origin: "*"
+}));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
