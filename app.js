@@ -8,7 +8,7 @@ function getSessionId() {
 }
 
 // Fullstack (Render) version: calls same-origin backend proxy at /api/chat
-const PROXY_URL = "/api/chat";
+const PROXY_URL = "https://aitaylor.onrender.com/api/chat";
 // No hard cap on teacher messages.
 const MAX_TEACHER_MESSAGES = Infinity;
 let chatPaused = false;
@@ -615,7 +615,7 @@ async function finishAndSubmit() {
     })),
   };
 
-  const resp = await fetch("/api/submit", {
+  const resp = await fetch("https://aitaylor.onrender.com/api/submit", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
