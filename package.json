@@ -1,3 +1,4 @@
+npm install cors
 {
   "name": "taylor-task-render",
   "version": "1.0.0",
